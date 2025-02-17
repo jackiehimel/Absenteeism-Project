@@ -1,0 +1,348 @@
+import streamlit as st
+import plotly.express as px
+from datetime import datetime, timedelta
+import pandas as pd
+
+from database import get_session, Student, AttendanceRecord, Intervention
+from analysis import (
+    calculate_attendance_rate,
+    get_chronic_absentees,
+    get_attendance_trends,
+    get_demographic_analysis
+)
+
+st.set_page_config(page_title="Student Attendance Tracker", layout="wide")
+
+def main():
+    st.title("Student Attendance Tracking System")
+    
+    # Sidebar for navigation
+    page = st.sidebar.selectbox(
+        "Select Page",
+        ["Dashboard", "Student Details", "Chronic Absenteeism", "Demographics", "Interventions"]
+    )
+    
+    if page == "Dashboard":
+        show_dashboard()
+    elif page == "Student Details":
+        show_student_details()
+    elif page == "Chronic Absenteeism":
+        show_chronic_absenteeism()
+    elif page == "Demographics":
+        show_demographics()
+    elif page == "Interventions":
+        show_interventions()
+
+def show_dashboard():
+    st.header("Dashboard")
+    
+    # Get earliest and latest dates from the database
+    session = get_session()
+    earliest_date = session.query(AttendanceRecord.date).order_by(AttendanceRecord.date.asc()).first()
+    latest_date = session.query(AttendanceRecord.date).order_by(AttendanceRecord.date.desc()).first()
+    
+    if earliest_date and latest_date:
+        earliest_date = earliest_date[0]
+        latest_date = latest_date[0]
+    else:
+        earliest_date = datetime(2018, 9, 1).date()
+        latest_date = datetime(2025, 6, 19).date()
+    
+    # Date range selector
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Start Date", earliest_date, min_value=earliest_date, max_value=latest_date)
+    with col2:
+        end_date = st.date_input("End Date", latest_date, min_value=earliest_date, max_value=latest_date)
+    
+    # Grade selector
+    available_grades = [grade[0] for grade in session.query(Student.grade).distinct().order_by(Student.grade)]
+    grade = st.selectbox("Select Grade", [None] + available_grades, format_func=lambda x: 'All Grades' if x is None else f'Grade {x}')
+    
+    # Get attendance trends
+    trends = get_attendance_trends(grade=grade, start_date=start_date, end_date=end_date)
+    
+    if trends.empty:
+        st.info("No attendance data available for the selected criteria.")
+        
+        if not session.query(AttendanceRecord).first():
+            # Show import instructions only if no data exists
+            st.subheader("Getting Started")
+            st.markdown("""
+            To get started:
+            1. Place your attendance Excel/Numbers files in the `data` directory
+            2. Run the data import script:
+               ```python
+               python src/initialize_system.py
+               ```
+            3. Return to this dashboard to view attendance trends
+            """)
+    else:
+        # Create two columns for metrics
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        
+        # Calculate overall metrics
+        avg_attendance = trends['attendance_rate'].mean()
+        min_attendance = trends['attendance_rate'].min()
+        max_attendance = trends['attendance_rate'].max()
+        
+        with metric_col1:
+            st.metric("Average Attendance Rate", f"{avg_attendance:.1f}%")
+        with metric_col2:
+            st.metric("Lowest Attendance Rate", f"{min_attendance:.1f}%")
+        with metric_col3:
+            st.metric("Highest Attendance Rate", f"{max_attendance:.1f}%")
+        
+        # Plot attendance trends
+        fig = px.line(trends, x='date', y='attendance_rate',
+                     title=f"Attendance Rate Trends{' for Grade ' + str(grade) if grade else ' (All Grades)'}")
+        fig.update_layout(
+            xaxis_title="Date",
+            yaxis_title="Attendance Rate (%)",
+            yaxis_range=[0, 100]
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Show chronic absenteeism summary
+        chronic = get_chronic_absentees(grade=grade)
+        st.subheader("Chronic Absenteeism Summary")
+        if chronic:
+            st.warning(f"Found {len(chronic)} students with chronic absenteeism")
+            
+            # Create a DataFrame for the chronic absentees
+            chronic_df = pd.DataFrame([
+                {
+                    'Student ID': c['student'].id,
+                    'Grade': c['student'].grade,
+                    'Attendance Rate': f"{c['attendance_rate']:.1f}%"
+                } for c in chronic
+            ])
+            
+            st.dataframe(chronic_df, hide_index=True)
+        else:
+            st.success("No students with chronic absenteeism found in the selected criteria.")
+
+def show_student_details():
+    st.header("Student Details")
+    
+    session = get_session()
+    students = session.query(Student).all()
+    
+    # Student selector
+    student = st.selectbox(
+        "Select Student",
+        students,
+        format_func=lambda x: f"{x.name} (Grade {x.grade})"
+    )
+    
+    if student:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Student Information")
+            st.write(f"Name: {student.name}")
+            st.write(f"Grade: {student.grade}")
+            st.write(f"Gender: {student.gender}")
+            st.write(f"Race: {student.race}")
+        
+        with col2:
+            st.subheader("Attendance Summary")
+            attendance_rate = calculate_attendance_rate(student.id)
+            st.write(f"Overall Attendance Rate: {attendance_rate:.1f}%")
+            
+            if attendance_rate < 80:
+                st.error("⚠️ Chronic Absenteeism Alert")
+            elif attendance_rate < 90:
+                st.warning("⚠️ Attendance Warning")
+            else:
+                st.success("✅ Good Attendance")
+        
+        # Show attendance history
+        st.subheader("Attendance History")
+        attendance_records = session.query(AttendanceRecord).filter(
+            AttendanceRecord.student_id == student.id
+        ).order_by(AttendanceRecord.date.desc()).all()
+        
+        if attendance_records:
+            # Prepare data for visualization and table
+            data = [{
+                'Date': record.date,
+                'Total Days': record.total_days,
+                'Present Days': record.present_days,
+                'Absent Days': record.absent_days,
+                'Attendance Rate': record.present_percentage,
+                'Attendance Rate Display': f"{record.present_percentage:.1f}%"
+            } for record in attendance_records]
+            df = pd.DataFrame(data)
+            
+            # Show attendance trend
+            fig = px.line(df, x='Date', y='Attendance Rate',
+                         title='Attendance Rate Over Time',
+                         labels={'Attendance Rate': 'Attendance Rate (%)'})
+            fig.update_layout(yaxis_range=[0, 100])
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Show detailed records
+            display_df = df.copy()
+            display_df['Attendance Rate'] = display_df['Attendance Rate Display']
+            display_df = display_df.drop('Attendance Rate Display', axis=1)
+            st.dataframe(display_df, hide_index=True)
+        else:
+            st.write("No attendance records found")
+
+def show_chronic_absenteeism():
+    st.header("Chronic Absenteeism")
+    
+    # Grade filter
+    grade = st.selectbox("Select Grade", [None] + list(range(1, 13)))
+    
+    # Get chronic absentees
+    chronic = get_chronic_absentees(grade=grade)
+    
+    if chronic:
+        data = [{
+            'name': c['student'].name,
+            'grade': c['student'].grade,
+            'attendance_rate': c['attendance_rate'],
+            'gender': c['student'].gender,
+            'race': c['student'].race
+        } for c in chronic]
+        
+        df = pd.DataFrame(data)
+        
+        # Show summary statistics
+        st.subheader("Summary")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Total Students", len(chronic))
+        with col2:
+            st.metric("Average Attendance Rate", f"{df['attendance_rate'].mean():.1f}%")
+        
+        # Show detailed table
+        st.subheader("Details")
+        st.dataframe(df)
+        
+        # Visualizations
+        fig = px.histogram(df, x='attendance_rate', nbins=20,
+                          title="Distribution of Attendance Rates")
+        st.plotly_chart(fig)
+    else:
+        st.write("No students with chronic absenteeism found")
+
+def show_demographics():
+    st.header("Demographics Analysis")
+    
+    # Grade filter
+    grade = st.selectbox("Select Grade", [None] + list(range(1, 13)))
+    
+    # Get demographic analysis
+    analysis = get_demographic_analysis(grade=grade)
+    
+    if all(series.empty for series in analysis.values()):
+        st.info("No demographic data available. Please import attendance data first.")
+        return
+    
+    # Display analysis
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if not analysis['by_gender'].empty:
+            st.subheader("Attendance by Gender")
+            fig1 = px.bar(
+                x=analysis['by_gender'].index,
+                y=analysis['by_gender'].values,
+                labels={'x': 'Gender', 'y': 'Average Attendance Rate (%)'},
+                title="Average Attendance Rate by Gender"
+            )
+            fig1.update_layout(showlegend=False)
+            st.plotly_chart(fig1, use_container_width=True)
+        else:
+            st.info("No gender data available")
+    
+    with col2:
+        if not analysis['by_race'].empty:
+            st.subheader("Attendance by Race")
+            fig2 = px.bar(
+                x=analysis['by_race'].index,
+                y=analysis['by_race'].values,
+                labels={'x': 'Race', 'y': 'Average Attendance Rate (%)'},
+                title="Average Attendance Rate by Race"
+            )
+            fig2.update_layout(showlegend=False)
+            st.plotly_chart(fig2, use_container_width=True)
+        else:
+            st.info("No race/ethnicity data available")
+    
+    if 'by_grade' in analysis and not analysis['by_grade'].empty:
+        st.subheader("Attendance by Grade Level")
+        fig3 = px.bar(
+            x=analysis['by_grade'].index,
+            y=analysis['by_grade'].values,
+            labels={'x': 'Grade', 'y': 'Average Attendance Rate (%)'},
+            title="Average Attendance Rate by Grade Level"
+        )
+        fig3.update_layout(showlegend=False)
+        st.plotly_chart(fig3, use_container_width=True)
+
+def show_interventions():
+    st.header("Interventions Tracking")
+    
+    session = get_session()
+    
+    # Student selector
+    students = session.query(Student).all()
+    student = st.selectbox(
+        "Select Student",
+        students,
+        format_func=lambda x: f"{x.name} (Grade {x.grade})"
+    )
+    
+    if student:
+        st.subheader(f"Interventions for {student.name}")
+        
+        # Show existing interventions
+        interventions = session.query(Intervention).filter(
+            Intervention.student_id == student.id
+        ).order_by(Intervention.date.desc()).all()
+        
+        if interventions:
+            data = [{
+                'date': inter.date,
+                'type': inter.type,
+                'description': inter.description,
+                'outcome': inter.outcome
+            } for inter in interventions]
+            df = pd.DataFrame(data)
+            st.dataframe(df)
+        else:
+            st.write("No interventions recorded")
+        
+        # Add new intervention
+        st.subheader("Add New Intervention")
+        with st.form("new_intervention"):
+            date = st.date_input("Date", datetime.now())
+            type = st.selectbox("Type", [
+                "Parent Contact",
+                "Counseling Session",
+                "Attendance Contract",
+                "Home Visit",
+                "Other"
+            ])
+            description = st.text_area("Description")
+            outcome = st.text_area("Outcome")
+            
+            if st.form_submit_button("Add Intervention"):
+                intervention = Intervention(
+                    student_id=student.id,
+                    date=date,
+                    type=type,
+                    description=description,
+                    outcome=outcome
+                )
+                session.add(intervention)
+                session.commit()
+                st.success("Intervention added successfully!")
+                st.experimental_rerun()
+
+if __name__ == "__main__":
+    main()
