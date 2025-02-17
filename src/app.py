@@ -5,11 +5,20 @@ from datetime import datetime, timedelta
 import pandas as pd
 from database import Student, AttendanceRecord, get_session
 from analysis import get_attendance_trends, get_tiered_attendance, calculate_attendance_rate, analyze_absence_patterns
-from database import Base, init_db
+
 def main():
 
+    # Initialize database and create tables
+    from database import Base, init_db
     engine = init_db()
     Base.metadata.create_all(engine)
+    
+    # Import data if database is empty
+    session = get_session()
+    student_count = session.query(Student).count()
+    if student_count == 0:
+        from data_import import import_all_data
+        import_all_data()
     
     # Configure the page to use wide mode
     st.set_page_config(
@@ -890,6 +899,10 @@ def show_chronic_absenteeism():
     session = get_session()
     available_grades = [grade[0] for grade in session.query(Student.grade).distinct().order_by(Student.grade)]
     
+    if not available_grades:
+        st.warning("No student data available in the database")
+        return
+    
     # Grade selector with only available grades
     st.markdown("<div class='info-card'>", unsafe_allow_html=True)
     grade = st.selectbox(
@@ -902,12 +915,16 @@ def show_chronic_absenteeism():
     # Get tiered attendance data
     tiers = get_tiered_attendance(grade=grade)
     
+    # Calculate total students and check if we have data
+    total_students = sum(len(tier) for tier in tiers.values())
+    if total_students == 0:
+        st.warning("No attendance data available for the selected criteria")
+        return
+        
     # Show tier summary
     st.subheader("Attendance Tiers Summary")
     st.markdown("<div class='info-card'>", unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
-    
-    total_students = sum(len(tier) for tier in tiers.values())
     
     with col1:
         chronic_count = len(tiers['tier3'])
@@ -1052,7 +1069,7 @@ def show_chronic_absenteeism():
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.success("No students currently requiring immediate intervention.")
-
+        
 def show_demographics():
     st.header("Demographics Analysis")
     
