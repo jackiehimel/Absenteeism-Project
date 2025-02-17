@@ -5,8 +5,12 @@ from datetime import datetime, timedelta
 import pandas as pd
 from database import Student, AttendanceRecord, get_session
 from analysis import get_attendance_trends, get_tiered_attendance, calculate_attendance_rate, analyze_absence_patterns
-
+from database import Base, init_db
 def main():
+
+    engine = init_db()
+    Base.metadata.create_all(engine)
+    
     # Configure the page to use wide mode
     st.set_page_config(
         page_title="Student Attendance Tracking System",
