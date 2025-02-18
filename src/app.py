@@ -25,15 +25,16 @@ def main():
     session = get_session()
     student_count = session.query(Student).count()
     
+    # Get absolute path to data directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(os.path.dirname(current_dir), 'data')
+    
     if student_count == 0:
         st.warning("No student data found in the database")
         if st.button("Import Data"):
             try:
                 from data_import import import_all_data
                 with st.spinner("Importing data..."):
-                    # Get absolute path to data directory
-                    current_dir = os.path.dirname(os.path.abspath(__file__))
-                    data_dir = os.path.join(os.path.dirname(current_dir), 'data')
                     st.write(f"Importing data from: {data_dir}")  # Debug info
                     import_all_data(data_dir)
                 st.success("Data imported successfully!")
@@ -43,6 +44,7 @@ def main():
                 st.write("Debug info:", os.getcwd(), os.listdir())  # More debug info
         return
     
+
     # Custom CSS to improve layout
     st.markdown("""
         <style>
