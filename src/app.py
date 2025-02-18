@@ -25,9 +25,16 @@ def main():
     session = get_session()
     student_count = session.query(Student).count()
     
-    # Get absolute path to data directory
+    # Get absolute path to data directory and show debug info
     current_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(os.path.dirname(current_dir), 'data')
+    
+    # Debug information
+    st.write("Current directory:", current_dir)
+    st.write("Data directory:", data_dir)
+    st.write("Directory exists:", os.path.exists(data_dir))
+    if os.path.exists(data_dir):
+        st.write("Files in data directory:", os.listdir(data_dir))
     
     if student_count == 0:
         st.warning("No student data found in the database")
@@ -35,13 +42,20 @@ def main():
             try:
                 from data_import import import_all_data
                 with st.spinner("Importing data..."):
-                    st.write(f"Importing data from: {data_dir}")  # Debug info
+                    st.write(f"Attempting to import data from: {data_dir}")
+                    if not os.path.exists(data_dir):
+                        raise Exception(f"Data directory not found: {data_dir}")
+                    files = [f for f in os.listdir(data_dir) if f.endswith(('.xlsx', '.numbers'))]
+                    if not files:
+                        raise Exception(f"No Excel or Numbers files found in {data_dir}")
+                    st.write("Found files:", files)
                     import_all_data(data_dir)
                 st.success("Data imported successfully!")
                 st.experimental_rerun()
             except Exception as e:
                 st.error(f"Error importing data: {str(e)}")
-                st.write("Debug info:", os.getcwd(), os.listdir())  # More debug info
+                st.write("Current working directory:", os.getcwd())
+                st.write("Directory contents:", os.listdir())
         return
     
 
