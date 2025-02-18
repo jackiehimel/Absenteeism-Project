@@ -6,10 +6,8 @@ import pandas as pd
 from database import Student, AttendanceRecord, get_session
 from analysis import get_attendance_trends, get_tiered_attendance, calculate_attendance_rate, analyze_absence_patterns
 
-
 def main():
-    import os  # Add this at the top
-    
+
     # Initialize database and create tables
     from database import Base, init_db
     engine = init_db()
@@ -32,15 +30,13 @@ def main():
             try:
                 from data_import import import_all_data
                 with st.spinner("Importing data..."):
-                    # Get the absolute path to the data directory
-                    data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-                    import_all_data(data_dir)
+                    import_all_data()
                 st.success("Data imported successfully!")
                 st.experimental_rerun()
             except Exception as e:
                 st.error(f"Error importing data: {str(e)}")
         return
-        
+    
     # Custom CSS to improve layout
     st.markdown("""
         <style>
