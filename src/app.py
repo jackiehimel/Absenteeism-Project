@@ -25,12 +25,11 @@ def main():
     session = get_session()
     student_count = session.query(Student).count()
     
-    # Get absolute path to data directory and show debug info
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(os.path.dirname(current_dir), 'data')
+    # Use the exact path we see in the debug output
+    data_dir = "/mount/src/absenteeism-project/data"
     
     # Debug information
-    st.write("Current directory:", current_dir)
+    st.write("Current directory:", os.getcwd())
     st.write("Data directory:", data_dir)
     st.write("Directory exists:", os.path.exists(data_dir))
     if os.path.exists(data_dir):
@@ -57,7 +56,7 @@ def main():
                 st.write("Current working directory:", os.getcwd())
                 st.write("Directory contents:", os.listdir())
         return
-    
+
 
     # Custom CSS to improve layout
     st.markdown("""
