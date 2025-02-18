@@ -28,12 +28,12 @@ def main():
     # Use the exact path we see in the debug output
     data_dir = "/mount/src/absenteeism-project/data"
     
-    # Debug information
-    st.write("Current directory:", os.getcwd())
-    st.write("Data directory:", data_dir)
-    st.write("Directory exists:", os.path.exists(data_dir))
-    if os.path.exists(data_dir):
-        st.write("Files in data directory:", os.listdir(data_dir))
+    # # Debug information
+    # st.write("Current directory:", os.getcwd())
+    # st.write("Data directory:", data_dir)
+    # st.write("Directory exists:", os.path.exists(data_dir))
+    # if os.path.exists(data_dir):
+    #     st.write("Files in data directory:", os.listdir(data_dir))
     
     if student_count == 0:
         st.warning("No student data found in the database")
@@ -877,6 +877,21 @@ def show_demographics():
         grade_stats = grade_data.groupby('grade')['attendance_rate'].agg(['mean', 'count']).reset_index()
         grade_stats.columns = ['Grade', 'Average Attendance Rate', 'Count']
         
+        fig = px.bar(
+            grade_stats,
+            x='Grade',
+            y='Average Attendance Rate',
+            text='Average Attendance Rate',  # Add this line to show the values
+            title='Average Attendance Rate by Grade',
+            labels={'Count': 'Number of Students'},
+            color_discrete_sequence=['#2563eb']
+        )
+        
+        # Update traces to show percentage with one decimal place
+        fig.update_traces(
+            texttemplate='%{text:.1f}%',  # Format as percentage with 1 decimal
+            textposition='outside'  # Show text above bars
+        )
         fig = px.bar(
             grade_stats,
             x='Grade',
