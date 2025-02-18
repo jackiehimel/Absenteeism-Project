@@ -178,3 +178,11 @@ def import_all_data(data_directory):
         import_excel_data(file_path)
     
     print("\nData import completed!")
+
+if __name__ == "__main__":
+    import os
+    # Get the absolute path to the data directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(os.path.dirname(current_dir), 'data')
+    print(f"Importing data from: {data_dir}")
+    import_all_data(data_dir)
