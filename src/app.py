@@ -13,19 +13,29 @@ def main():
     engine = init_db()
     Base.metadata.create_all(engine)
     
-    # Import data if database is empty
-    session = get_session()
-    student_count = session.query(Student).count()
-    if student_count == 0:
-        from data_import import import_all_data
-        import_all_data()
-    
-    # Configure the page to use wide mode
+    # Configure the page
     st.set_page_config(
         page_title="Student Attendance Tracking System",
         layout="wide",
         initial_sidebar_state="collapsed"
     )
+    
+    # Check if we have any data
+    session = get_session()
+    student_count = session.query(Student).count()
+    
+    if student_count == 0:
+        st.warning("No student data found in the database")
+        if st.button("Import Data"):
+            try:
+                from data_import import import_all_data
+                with st.spinner("Importing data..."):
+                    import_all_data()
+                st.success("Data imported successfully!")
+                st.experimental_rerun()
+            except Exception as e:
+                st.error(f"Error importing data: {str(e)}")
+        return
     
     # Custom CSS to improve layout
     st.markdown("""
@@ -1069,7 +1079,7 @@ def show_chronic_absenteeism():
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.success("No students currently requiring immediate intervention.")
-        
+
 def show_demographics():
     st.header("Demographics Analysis")
     
