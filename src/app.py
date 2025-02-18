@@ -300,15 +300,16 @@ def show_data_upload():
 def show_dashboard():
     # Get earliest and latest dates from the database
     session = get_session()
-    earliest_date = session.query(AttendanceRecord.date).order_by(AttendanceRecord.date.asc()).first()
-    latest_date = session.query(AttendanceRecord.date).order_by(AttendanceRecord.date.desc()).first()
+    earliest_record = session.query(AttendanceRecord.date).order_by(AttendanceRecord.date.asc()).first()
+    latest_record = session.query(AttendanceRecord.date).order_by(AttendanceRecord.date.desc()).first()
     
-    if earliest_date and latest_date:
-        earliest_date = earliest_date[0]
-        latest_date = latest_date[0]
+    if earliest_record and latest_record:
+        earliest_date = earliest_record[0]
+        latest_date = latest_record[0]
     else:
-        earliest_date = datetime(2018, 9, 1).date()
-        latest_date = datetime(2025, 6, 19).date()
+        # Fallback dates only if database is completely empty
+        earliest_date = datetime.now().date().replace(month=9, day=1)  # Default to Sept 1st of current year
+        latest_date = earliest_date.replace(year=earliest_date.year + 1, month=6, day=19)  # Default to June 19th next year
     
     # Time period selector
     st.markdown("""
@@ -319,7 +320,7 @@ def show_dashboard():
     with col1:
         start_date = st.date_input(
             "Start Date",
-            earliest_date,
+            min(datetime.now().date(), earliest_date),  # Default to earlier of current date or earliest record
             min_value=earliest_date,
             max_value=latest_date,
             key="start_date"
