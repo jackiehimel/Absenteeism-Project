@@ -219,7 +219,8 @@ def main():
         "Student Details",
         "Chronic Absenteeism",
         "Demographics",
-        "Interventions"
+        "Interventions",
+        "Data Upload"
     ])
     
     # Show content based on selected tab
@@ -233,6 +234,50 @@ def main():
         show_demographics()
     with tabs[4]:
         show_interventions()
+    with tabs[5]:
+        show_data_upload()
+
+def show_data_upload():
+    st.header("Data Upload")
+    
+    st.markdown("<div class='info-card'>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload Attendance Data", type=['xlsx', 'numbers'])
+    
+    if uploaded_file:
+        try:
+            # Save the uploaded file
+            with st.spinner("Processing uploaded file..."):
+                # Create temp directory if it doesn't exist
+                os.makedirs("/mount/src/absenteeism-project/data", exist_ok=True)
+                
+                # Save file
+                file_path = os.path.join("/mount/src/absenteeism-project/data", uploaded_file.name)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                
+                # Import the data
+                from data_import import import_excel_data
+                import_excel_data(file_path)
+                
+                st.success(f"Successfully imported data from {uploaded_file.name}")
+                st.experimental_rerun()
+        except Exception as e:
+            st.error(f"Error importing data: {str(e)}")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Show upload instructions
+    st.markdown("""
+    <div class='info-card'>
+        <h3>Upload Instructions</h3>
+        <p>Please ensure your Excel file follows these requirements:</p>
+        <ul>
+            <li>File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)</li>
+            <li>Required columns: user_id, class_label, total_days, present_days, absent_days</li>
+            <li>Optional columns: Welfare status, NYF status, OSIS ID Number</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 def show_dashboard():
     # Get earliest and latest dates from the database
