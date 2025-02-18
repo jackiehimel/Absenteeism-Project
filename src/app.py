@@ -247,30 +247,6 @@ def show_dashboard():
         earliest_date = datetime(2018, 9, 1).date()
         latest_date = datetime(2025, 6, 19).date()
     
-    # Custom CSS for date inputs and selectors
-    st.markdown("""
-        <style>
-        [data-testid="stDateInput"] {
-            width: 100%;
-        }
-        [data-testid="stDateInput"] > div {
-            width: 100%;
-        }
-        [data-testid="stDateInput"] input {
-            padding: 0.5rem;
-            font-size: 1rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-        }
-        .stSelectbox > div > div {
-            padding: 0.5rem;
-            font-size: 1rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
     # Time period selector
     st.markdown("""
         <h3 style='margin: 1rem 0; color: #374151; font-size: 1.2rem; font-weight: 600;'>Time Period</h3>
@@ -285,9 +261,6 @@ def show_dashboard():
             max_value=latest_date,
             key="start_date"
         )
-        # Ensure start_date is a date object
-        if isinstance(start_date, datetime):
-            start_date = start_date.date()
     with col2:
         end_date = st.date_input(
             "End Date",
@@ -296,18 +269,12 @@ def show_dashboard():
             max_value=latest_date,
             key="end_date"
         )
-        # Ensure end_date is a date object
-        if isinstance(end_date, datetime):
-            end_date = end_date.date()
     with col3:
         interval = st.selectbox(
             "Time Interval",
             ["Daily", "Weekly", "Monthly", "Yearly"],
             key="interval"
         )
-    
-    # Add some spacing before the grade tabs
-    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
     
     # Get available grades
     available_grades = [grade[0] for grade in session.query(Student.grade).distinct().order_by(Student.grade)]
@@ -318,10 +285,10 @@ def show_dashboard():
     
     for i, tab in enumerate(active_tab):
         with tab:
+            # Convert grade to int for database query
+            grade = None if i == 0 else int(available_grades[i-1])
+            
             try:
-                # Convert grade to int for database query
-                grade = None if i == 0 else int(available_grades[i-1])
-                
                 # Get attendance trends
                 trends = get_attendance_trends(
                     grade=grade,
@@ -329,451 +296,159 @@ def show_dashboard():
                     end_date=end_date,
                     interval=interval.lower()
                 )
-            
+                
                 if not trends.empty:
                     # Create attendance trend line plot
                     fig = go.Figure()
+                    
+                    # Add the main line
+                    fig.add_trace(go.Scatter(
+                        x=trends['period'],
+                        y=trends['attendance_rate'],
+                        mode='lines+markers',
+                        name='Attendance Rate',
+                        line=dict(color='#2563eb', width=3),
+                        marker=dict(size=8)
+                    ))
+                    
+                    # Add reference lines
+                    fig.add_hline(y=90, line_dash="dash", line_color="#22c55e", 
+                                annotation_text="On Track (90%)", annotation_position="top right")
+                    fig.add_hline(y=85, line_dash="dash", line_color="#eab308", 
+                                annotation_text="Warning (85%)", annotation_position="top right")
+                    fig.add_hline(y=80, line_dash="dash", line_color="#ef4444", 
+                                annotation_text="At Risk (80%)", annotation_position="top right")
+                    
+                    # Update layout
+                    fig.update_layout(
+                        title={
+                            'text': f'Attendance Trends {"(All Grades)" if grade is None else f"(Grade {grade})"}',
+                            'y': 0.95,
+                            'x': 0.5,
+                            'xanchor': 'center',
+                            'yanchor': 'top'
+                        },
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        yaxis_title='Attendance Rate (%)',
+                        xaxis_title='Date',
+                        showlegend=False,
+                        yaxis=dict(range=[75, 100]),
+                        plot_bgcolor='white',
+                        height=400
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Show attendance tiers
+                    tiers = get_tiered_attendance(grade=grade)
+                    if tiers:
+                        total_students = sum(len(tier) for tier in tiers.values())
+                        
+                        # Tier metrics in a container with a light background
+                        st.markdown("""
+                            <div style='background-color: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 2rem 0;'>
+                                <h3 style='margin: 0 0 1.5rem 0; color: #374151; font-size: 1.2rem;'>Attendance Tiers</h3>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Create tier boxes with better styling
+                        tier_cols = st.columns(4)
+                        
+                        with tier_cols[0]:
+                            chronic_count = len(tiers['tier3'])
+                            st.markdown(f"""
+                                <div class='tier-box' style='background-color: #fee2e2; border: 1px solid #fecaca;'>
+                                    <h4 style='color: #991b1b;'>Tier 3 (Chronic)</h4>
+                                    <p style='font-size: 1.3rem; color: #dc2626;'>{chronic_count} students</p>
+                                    <p>{chronic_count/total_students*100:.1f}%</p>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        
+                        with tier_cols[1]:
+                            at_risk_count = len(tiers['tier2'])
+                            st.markdown(f"""
+                                <div class='tier-box' style='background-color: #fef3c7; border: 1px solid #fde68a;'>
+                                    <h4 style='color: #92400e;'>Tier 2 (At Risk)</h4>
+                                    <p style='font-size: 1.3rem; color: #d97706;'>{at_risk_count} students</p>
+                                    <p>{at_risk_count/total_students*100:.1f}%</p>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        
+                        with tier_cols[2]:
+                            warning_count = len(tiers['tier1'])
+                            st.markdown(f"""
+                                <div class='tier-box' style='background-color: #dbeafe; border: 1px solid #bfdbfe;'>
+                                    <h4 style='color: #1e40af;'>Tier 1 (Warning)</h4>
+                                    <p style='font-size: 1.3rem; color: #2563eb;'>{warning_count} students</p>
+                                    <p>{warning_count/total_students*100:.1f}%</p>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        
+                        with tier_cols[3]:
+                            on_track_count = len(tiers['on_track'])
+                            st.markdown(f"""
+                                <div class='tier-box' style='background-color: #dcfce7; border: 1px solid #bbf7d0;'>
+                                    <h4 style='color: #166534;'>On Track</h4>
+                                    <p style='font-size: 1.3rem; color: #16a34a;'>{on_track_count} students</p>
+                                    <p>{on_track_count/total_students*100:.1f}%</p>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        
+                        # Show absence patterns
+                        patterns = analyze_absence_patterns(grade=grade)
+                        if patterns:
+                            st.subheader("Absence Patterns")
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                # Day of week pattern
+                                fig = go.Figure(data=[
+                                    go.Bar(
+                                        x=patterns['day_of_week'].index,
+                                        y=patterns['day_of_week'].values,
+                                        marker_color='#2563eb'
+                                    )
+                                ])
+                                
+                                fig.update_layout(
+                                    title="Absences by Day of Week",
+                                    xaxis_title="Day of Week",
+                                    yaxis_title="Absence Rate (%)",
+                                    showlegend=False,
+                                    margin=dict(l=0, r=0, t=40, b=0),
+                                    height=300,
+                                    plot_bgcolor='white',
+                                    yaxis=dict(gridcolor='#e5e7eb')
+                                )
+                                
+                                st.plotly_chart(fig, use_container_width=True)
+                            
+                            with col2:
+                                # Monthly pattern
+                                fig = go.Figure(data=[
+                                    go.Bar(
+                                        x=patterns['month'].index,
+                                        y=patterns['month'].values,
+                                        marker_color='#2563eb'
+                                    )
+                                ])
+                                
+                                fig.update_layout(
+                                    title="Absences by Month",
+                                    xaxis_title="Month",
+                                    yaxis_title="Absence Rate (%)",
+                                    showlegend=False,
+                                    margin=dict(l=0, r=0, t=40, b=0),
+                                    height=300,
+                                    plot_bgcolor='white',
+                                    yaxis=dict(gridcolor='#e5e7eb')
+                                )
+                                
+                                st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("No attendance data available for the selected time period.")
             except Exception as e:
                 st.error(f"Error loading attendance data: {str(e)}")
-                continue
-                
-                # Add the main line
-                fig.add_trace(go.Scatter(
-                    x=trends['period'],
-                    y=trends['attendance_rate'],
-                    mode='lines+markers',
-                    name='Attendance Rate',
-                    line=dict(color='#2563eb', width=3),
-                    marker=dict(size=8),
-                    hovertemplate='%{x|%B %Y}<br>Attendance Rate: %{y:.1f}%<extra></extra>'
-                ))
-                
-                # Add reference lines
-                fig.add_hline(y=90, line_dash="dash", line_color="#22c55e", annotation_text="On Track (90%)", annotation_position="top right")
-                fig.add_hline(y=85, line_dash="dash", line_color="#eab308", annotation_text="Warning (85%)", annotation_position="top right")
-                fig.add_hline(y=80, line_dash="dash", line_color="#ef4444", annotation_text="At Risk (80%)", annotation_position="top right")
-                
-                # Update layout
-                fig.update_layout(
-                    title={
-                        'text': f'Attendance Trends {"(All Grades)" if grade is None else f"(Grade {grade})"}',
-                        'y':0.95,
-                        'x':0.5,
-                        'xanchor': 'center',
-                        'yanchor': 'top'
-                    },
-                    xaxis_title='Time Period',
-                    yaxis_title='Attendance Rate (%)',
-                    yaxis=dict(
-                        range=[75, 100],
-                        gridcolor='#e5e7eb',
-                        zeroline=False
-                    ),
-                    xaxis=dict(
-                        gridcolor='#e5e7eb',
-                        type='date'
-                    ),
-                    plot_bgcolor='white',
-                    showlegend=False,
-                    height=500,
-                    margin=dict(l=0, r=0, t=50, b=0)
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning("No attendance data available for the selected time period.")
-            
-            # Get attendance trends
-            start_date=start_date, 
-            end_date=end_date, 
-            interval=interval.lower()
-            
-            if trends.empty:
-                st.info("No attendance data available for the selected criteria.")
-                continue
-            
-            # Show attendance tiers
-            tiers = get_tiered_attendance(grade=grade)
-            if tiers:
-                total_students = sum(len(tier) for tier in tiers.values())
-                
-                # Tier metrics in a container with a light background
-                with st.container():
-                    st.markdown("""
-                        <div style='background-color: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 2rem 0;'>
-                            <h3 style='margin: 0 0 1.5rem 0; color: #374151; font-size: 1.2rem;'>Attendance Tiers</h3>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Custom CSS for tier boxes
-                    st.markdown("""
-                        <style>
-                        [data-testid="stMetricValue"] {
-                            font-size: 1.5rem !important;
-                        }
-                        .tier-box {
-                            padding: 1rem;
-                            border-radius: 8px;
-                            text-align: center;
-                            height: 100%;
-                        }
-                        .tier-box h4 {
-                            font-size: 1.1rem;
-                            margin-bottom: 0.5rem;
-                            font-weight: 600;
-                        }
-                        .tier-box p {
-                            font-size: 1rem;
-                            margin: 0;
-                            color: #4b5563;
-                        }
-                        </style>
-                    """, unsafe_allow_html=True)
-                    
-                    # Create tier boxes with better styling
-                    tier_cols = st.columns(4)
-                    
-                    with tier_cols[0]:
-                        chronic_count = len(tiers['tier3'])
-                        st.markdown(f"""
-                            <div class='tier-box' style='background-color: #fee2e2; border: 1px solid #fecaca;'>
-                                <h4 style='color: #991b1b;'>Tier 3 (Chronic)</h4>
-                                <p style='font-size: 1.3rem; color: #dc2626;'>{chronic_count} students</p>
-                                <p>{chronic_count/total_students*100:.1f}%</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with tier_cols[1]:
-                        at_risk_count = len(tiers['tier2'])
-                        st.markdown(f"""
-                            <div class='tier-box' style='background-color: #fef3c7; border: 1px solid #fde68a;'>
-                                <h4 style='color: #92400e;'>Tier 2 (At Risk)</h4>
-                                <p style='font-size: 1.3rem; color: #d97706;'>{at_risk_count} students</p>
-                                <p>{at_risk_count/total_students*100:.1f}%</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with tier_cols[2]:
-                        warning_count = len(tiers['tier1'])
-                        st.markdown(f"""
-                            <div class='tier-box' style='background-color: #dbeafe; border: 1px solid #bfdbfe;'>
-                                <h4 style='color: #1e40af;'>Tier 1 (Warning)</h4>
-                                <p style='font-size: 1.3rem; color: #2563eb;'>{warning_count} students</p>
-                                <p>{warning_count/total_students*100:.1f}%</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with tier_cols[3]:
-                        on_track_count = len(tiers['on_track'])
-                        st.markdown(f"""
-                            <div class='tier-box' style='background-color: #dcfce7; border: 1px solid #bbf7d0;'>
-                                <h4 style='color: #166534;'>On Track</h4>
-                                <p style='font-size: 1.3rem; color: #16a34a;'>{on_track_count} students</p>
-                                <p>{on_track_count/total_students*100:.1f}%</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-            
-            # Attendance Trends section
-            with st.container():
-                st.markdown("""
-                    <div style='background-color: #F9FAFB; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0;'>
-                        <h3 style='margin: 0 0 1rem 0; color: #374151;'>Attendance Trends</h3>
-                    </div>
-                """, unsafe_allow_html=True)
-                
-                # Format period based on interval
-                if interval == 'daily':
-                    trends['display_period'] = trends['period'].dt.strftime('%Y-%m-%d')
-                elif interval == 'weekly':
-                    trends['display_period'] = trends['period'].dt.strftime('Week of %Y-%m-%d')
-                elif interval == 'monthly':
-                    trends['display_period'] = trends['period'].dt.strftime('%B %Y')
-                else:  # yearly
-                    trends['display_period'] = trends['period'].dt.strftime('%Y')
-                
-                # Calculate average attendance rate
-                avg_rate = trends['attendance_rate'].mean()
-                
-                # Add summary metrics above the plot
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Average Rate", f"{avg_rate:.1f}%")
-                with col2:
-                    min_rate = trends['attendance_rate'].min()
-                    st.metric("Lowest Rate", f"{min_rate:.1f}%")
-                with col3:
-                    max_rate = trends['attendance_rate'].max()
-                    st.metric("Highest Rate", f"{max_rate:.1f}%")
-                with col4:
-                    current_rate = trends['attendance_rate'].iloc[-1]
-                    delta = current_rate - trends['attendance_rate'].iloc[-2]
-                    st.metric("Current Rate", f"{current_rate:.1f}%", f"{delta:+.1f}%")
-                
-                # Create a more informative plot
-                fig = go.Figure()
-                
-                # Add the main attendance line with gradient color
-                fig.add_trace(go.Scatter(
-                    x=trends['display_period'],
-                    y=trends['attendance_rate'],
-                    mode='lines+markers',
-                    line=dict(width=3, color='#2563eb'),
-                    marker=dict(
-                        size=8,
-                        color=trends['attendance_rate'],
-                        colorscale=[
-                            [0, '#ef4444'],    # Red for low values
-                            [0.5, '#eab308'],  # Yellow for middle values
-                            [1, '#22c55e']     # Green for high values
-                        ],
-                        showscale=False
-                    ),
-                    hovertemplate='%{y:.1f}%<br>%{x}'
-                ))
-                
-                # Add shaded regions for different tiers
-                # Add shaded regions with more visible colors
-                fig.add_hrect(y0=90, y1=100, fillcolor='rgba(34,197,94,0.15)', layer='below', line_width=0)  # Green
-                fig.add_hrect(y0=85, y1=90, fillcolor='rgba(59,130,246,0.15)', layer='below', line_width=0)  # Blue
-                fig.add_hrect(y0=80, y1=85, fillcolor='rgba(250,204,21,0.2)', layer='below', line_width=0)  # Brighter yellow
-                fig.add_hrect(y0=75, y1=80, fillcolor='rgba(239,68,68,0.15)', layer='below', line_width=0)  # Red
-                
-                # Add reference lines with improved styling
-                fig.add_hline(y=avg_rate, line_dash="dash", line_color="rgba(0,0,0,0.5)",
-                             annotation=dict(
-                                text=f"Average: {avg_rate:.1f}%",
-                                font=dict(size=12, color='rgba(0,0,0,0.7)'),
-                                bgcolor="rgba(255,255,255,0.9)",
-                                bordercolor="rgba(0,0,0,0.1)",
-                                borderwidth=1
-                             ),
-                             annotation_position="bottom right")
-                
-                # Add reference lines for attendance tiers
-                annotations = [
-                    dict(y=90, text="On Track (≥90%)", color="#22c55e"),
-                    dict(y=85, text="Warning (<85%)", color="#3b82f6"),
-                    dict(y=80, text="At Risk (<80%)", color="#ef4444")
-                ]
-                
-                for ann in annotations:
-                    fig.add_hline(
-                        y=ann['y'],
-                        line_dash="dot",
-                        line_color=ann['color'],
-                        line_width=1,
-                        annotation=dict(
-                            text=ann['text'],
-                            font=dict(size=12, color=ann['color']),
-                            bgcolor="rgba(255,255,255,0.9)",
-                            bordercolor="rgba(0,0,0,0.1)",
-                            borderwidth=1
-                        ),
-                        annotation_position="left"
-                    )
-                
-                # Update layout with better styling and margins
-                fig.update_layout(
-                    title={
-                        'text': 'Attendance Trends Over Time',
-                        'font': {'size': 24, 'color': '#111827'},
-                        'y': 0.95,
-                        'x': 0.5,
-                        'xanchor': 'center',
-                        'yanchor': 'top'
-                    },
-                    margin=dict(t=80, b=50, l=100, r=40),  # Increased left margin significantly
-                    xaxis_title={
-                        'text': 'Time Period',
-                        'font': {'size': 16, 'color': '#374151'},
-                        'standoff': 20
-                    },
-                    yaxis_title={
-                        'text': 'Attendance Rate (%)',
-                        'font': {'size': 16, 'color': '#374151'},
-                        'standoff': 30  # Increased standoff for y-axis title
-                    },
-                    yaxis_range=[75, 100],
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
-                    xaxis=dict(
-                        showgrid=True,
-                        gridwidth=1,
-                        gridcolor='rgba(0,0,0,0.1)',
-                        tickangle=45,
-                        tickfont=dict(size=14),
-                        title_standoff=20
-                    ),
-                    yaxis=dict(
-                        showgrid=True,
-                        gridwidth=1,
-                        gridcolor='rgba(0,0,0,0.1)',
-                        tickformat='.0f',
-                        tickfont=dict(size=14),
-                        title_standoff=20,
-                        automargin=True  # Ensure y-axis labels are not cut off
-                    ),
-                    hoverlabel=dict(
-                        bgcolor='white',
-                        font_size=14,
-                        bordercolor='rgba(0,0,0,0.1)'
-                    ),
-                    height=500  # Taller plot for better visibility
-                )
-                if interval != 'yearly':
-                    fig.update_xaxes(tickangle=45)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            # Absence Patterns section
-            with st.container():
-                st.markdown("""
-                    <div style='background-color: #F9FAFB; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0;'>
-                        <h3 style='margin: 0 0 1rem 0; color: #374151;'>Absence Patterns</h3>
-                    </div>
-                """, unsafe_allow_html=True)
-                
-                patterns = analyze_absence_patterns(grade=grade)
-                
-                if patterns:
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        # Day of week patterns with improved visualization
-                        fig = go.Figure()
-                        
-                        # Add bars with better styling
-                        fig.add_trace(go.Bar(
-                            x=patterns['day_of_week'].index,
-                            y=patterns['day_of_week'].values,
-                            text=patterns['day_of_week'].values.round(1).astype(str) + '%',
-                            textposition='auto',
-                            marker_color='#2563eb',
-                            hovertemplate='%{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
-                        ))
-                        
-                        fig.update_layout(
-                            title={
-                                'text': 'Absences by Day of Week',
-                                'font': {'size': 20, 'color': '#111827'},
-                                'y': 0.95,
-                                'x': 0.5,
-                                'xanchor': 'center',
-                                'yanchor': 'top'
-                            },
-                            margin=dict(t=60, b=40, l=60, r=20),
-                            plot_bgcolor='white',
-                            paper_bgcolor='white',
-                            showlegend=False,
-                            xaxis=dict(
-                                title={
-                                    'text': 'Day of Week',
-                                    'font': {'size': 14, 'color': '#374151'},
-                                    'standoff': 20
-                                },
-                                showgrid=True,
-                                gridwidth=1,
-                                gridcolor='rgba(0,0,0,0.1)',
-                                tickfont=dict(size=12)
-                            ),
-                            yaxis=dict(
-                                title={
-                                    'text': 'Absence Rate (%)',
-                                    'font': {'size': 14, 'color': '#374151'},
-                                    'standoff': 20
-                                },
-                                showgrid=True,
-                                gridwidth=1,
-                                gridcolor='rgba(0,0,0,0.1)',
-                                tickfont=dict(size=12),
-                                range=[0, max(patterns['day_of_week'].values) * 1.1]
-                            ),
-                            height=400
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    with col2:
-                        # Month patterns with improved visualization
-                        fig = go.Figure()
-                        
-                        # Add bars with better styling
-                        fig.add_trace(go.Bar(
-                            x=patterns['month'].index,
-                            y=patterns['month'].values,
-                            text=patterns['month'].values.round(1).astype(str) + '%',
-                            textposition='auto',
-                            marker_color='#2563eb',
-                            hovertemplate='%{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
-                        ))
-                        
-                        fig.update_layout(
-                            title={
-                                'text': 'Absences by Month',
-                                'font': {'size': 20, 'color': '#111827'},
-                                'y': 0.95,
-                                'x': 0.5,
-                                'xanchor': 'center',
-                                'yanchor': 'top'
-                            },
-                            margin=dict(t=60, b=40, l=60, r=20),
-                            plot_bgcolor='white',
-                            paper_bgcolor='white',
-                            showlegend=False,
-                            xaxis=dict(
-                                title={
-                                    'text': 'Month',
-                                    'font': {'size': 14, 'color': '#374151'},
-                                    'standoff': 20
-                                },
-                                showgrid=True,
-                                gridwidth=1,
-                                gridcolor='rgba(0,0,0,0.1)',
-                                tickfont=dict(size=12)
-                            ),
-                            yaxis=dict(
-                                title={
-                                    'text': 'Absence Rate (%)',
-                                    'font': {'size': 14, 'color': '#374151'},
-                                    'standoff': 20
-                                },
-                                showgrid=True,
-                                gridwidth=1,
-                                gridcolor='rgba(0,0,0,0.1)',
-                                tickfont=dict(size=12),
-                                range=[0, max(patterns['month'].values) * 1.1]
-                            ),
-                            height=400
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-            
-            # Detailed Lists
-            if st.checkbox("Show Detailed Student Lists", key=f"show_details_{i}"):
-                st.subheader("Students by Tier")
-                
-                # Show tier 3 (chronic) students
-                if tiers['tier3']:
-                    st.error("Tier 3 - Chronic Absenteeism")
-                    df = pd.DataFrame([
-                        {
-                            'Student ID': t['student'].id,
-                            'Grade': t['student'].grade,
-                            'Attendance Rate': f"{t['attendance_rate']:.1f}%",
-                            'Last Updated': t['last_updated']
-                        } for t in tiers['tier3']
-                    ])
-                    st.dataframe(df, hide_index=True)
-                
-                # Show tier 2 students
-                if tiers['tier2']:
-                    st.warning("Tier 2 - At Risk")
-                    df = pd.DataFrame([
-                        {
-                            'Student ID': t['student'].id,
-                            'Grade': t['student'].grade,
-                            'Attendance Rate': f"{t['attendance_rate']:.1f}%",
-                            'Last Updated': t['last_updated']
-                        } for t in tiers['tier2']
-                    ])
-                    st.dataframe(df, hide_index=True)
 
 def show_student_details():
     st.header("Student Details")
