@@ -50,13 +50,12 @@ def main():
                     st.write("Found files:", files)
                     import_all_data(data_dir)
                 st.success("Data imported successfully!")
-                st.experimental_rerun()
+                st.rerun()  # Changed from experimental_rerun() to rerun()
             except Exception as e:
                 st.error(f"Error importing data: {str(e)}")
                 st.write("Current working directory:", os.getcwd())
                 st.write("Directory contents:", os.listdir())
         return
-
 
     # Custom CSS to improve layout
     st.markdown("""
