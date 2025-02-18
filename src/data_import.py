@@ -5,15 +5,31 @@ import os
 import re
 
 def parse_filename_date(filename):
-    """Extract date range from filename format '9:1:2023-6:19:2024'."""
-    pattern = r'(\d+):(\d+):(\d+)-(\d+):(\d+):(\d+)'
-    match = re.search(pattern, filename)
+    """Extract date range from filename format '9:1:2023-6:19:2024' or '9:1:2024 6:19:2025'."""
+    # Try the standard format first
+    pattern1 = r'(\d+):(\d+):(\d+)-(\d+):(\d+):(\d+)'
+    # Try the alternative format with space
+    pattern2 = r'(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)'
+    
+    for pattern in [pattern1, pattern2]:
+        match = re.search(pattern, filename)
+        if match:
+            start_month, start_day, start_year, end_month, end_day, end_year = map(int, match.groups())
+            return (
+                datetime(start_year, start_month, start_day).date(),
+                datetime(end_year, end_month, end_day).date()
+            )
+    
+    # If no match found, try extracting just the year ranges
+    year_pattern = r'(\d{4}).*?(\d{4})'
+    match = re.search(year_pattern, filename)
     if match:
-        start_month, start_day, start_year, end_month, end_day, end_year = map(int, match.groups())
+        start_year, end_year = map(int, match.groups())
         return (
-            datetime(start_year, start_month, start_day).date(),
-            datetime(end_year, end_month, end_day).date()
+            datetime(start_year, 9, 1).date(),  # Assume Sept 1st start
+            datetime(end_year, 6, 19).date()    # Assume June 19th end
         )
+    
     return None, None
 
 def get_welfare_code(status):
