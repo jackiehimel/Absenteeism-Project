@@ -3,6 +3,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
+import os
+from data_import import import_excel_data
 from database import Student, AttendanceRecord, get_session
 from analysis import get_attendance_trends, get_tiered_attendance, calculate_attendance_rate, analyze_absence_patterns
 
@@ -241,17 +243,18 @@ def show_data_upload():
     st.header("Data Upload")
     
     st.markdown("<div class='info-card'>", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("Upload Attendance Data", type=['xlsx', 'numbers'])
+    uploaded_file = st.file_uploader("Upload Attendance Data", type=['xlsx'])
     
     if uploaded_file:
         try:
             # Save the uploaded file
             with st.spinner("Processing uploaded file..."):
-                # Create temp directory if it doesn't exist
-                os.makedirs("/mount/src/absenteeism-project/data", exist_ok=True)
+                # Get the data directory path
+                data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+                os.makedirs(data_dir, exist_ok=True)
                 
                 # Save file
-                file_path = os.path.join("/mount/src/absenteeism-project/data", uploaded_file.name)
+                file_path = os.path.join(data_dir, uploaded_file.name)
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 
@@ -260,21 +263,36 @@ def show_data_upload():
                 import_excel_data(file_path)
                 
                 st.success(f"Successfully imported data from {uploaded_file.name}")
-                st.experimental_rerun()
+                st.rerun()  # Use st.rerun() instead of st.experimental_rerun()
         except Exception as e:
             st.error(f"Error importing data: {str(e)}")
+            st.error("Please make sure your file follows the required format and column names.")
     
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Show upload instructions
+    # Show upload instructions with more detail
     st.markdown("""
     <div class='info-card'>
         <h3>Upload Instructions</h3>
         <p>Please ensure your Excel file follows these requirements:</p>
         <ul>
             <li>File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)</li>
-            <li>Required columns: user_id, class_label, total_days, present_days, absent_days</li>
-            <li>Optional columns: Welfare status, NYF status, OSIS ID Number</li>
+            <li>Required columns (case-sensitive):
+                <ul>
+                    <li>user_id</li>
+                    <li>class_label</li>
+                    <li>total_days</li>
+                    <li>present_days</li>
+                    <li>absent_days</li>
+                </ul>
+            </li>
+            <li>Optional columns:
+                <ul>
+                    <li>Welfare status</li>
+                    <li>NYF status</li>
+                    <li>OSIS ID Number</li>
+                </ul>
+            </li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
