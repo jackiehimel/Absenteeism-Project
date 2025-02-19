@@ -1259,59 +1259,31 @@ def show_interventions():
             )
         
         with st.form(key="new_intervention_form"):
+            # Flatten intervention types into a single list
+            intervention_types = [
+                "Morning Phone Call",
+                "Convos with Parents",
+                "Letters",
+                "Point Person",
+                "Home Visits",
+                "Buddy System",
+                "Social Worker Weekly Attendance Meeting",
+                "Family Meetings",
+                "Celebration",
+                "Incentivizes",
+                "Family trips",
+                "Individual Point Sheets For Attendance",
+                "Attendance Contracts",
+                "Lobby",
+                "Other"
+            ]
             
-            # Intervention type selection with categories
-            st.markdown("##### Intervention Type")
-            intervention_categories = {
-                "Communication": [
-                    "Morning Phone Call",
-                    "Convos with Parents",
-                    "Letters",
-                ],
-                "In-Person Support": [
-                    "Point Person",
-                    "Home Visits",
-                    "Buddy System",
-                    "Social Worker Weekly Attendance Meeting",
-                    "Family Meetings",
-                ],
-                "Incentives & Recognition": [
-                    "Celebration",
-                    "Incentivizes",
-                    "Family trips",
-                ],
-                "Monitoring & Agreements": [
-                    "Individual Point Sheets For Attendance",
-                    "Attendance Contracts",
-                    "Lobby",
-                ],
-                "Other": ["Other"]
-            }
-            
-            # Intervention type selection with categories
-            st.markdown("##### Intervention Type")
-            
-            # Create list of options with category headers
-            intervention_options = []
-            for category, options in intervention_categories.items():
-                # Add category header
-                intervention_options.append({"label": f"--- {category} ---", "disabled": True})
-                # Add options
-                intervention_options.extend(options)
-            
-            # Single radio group for intervention type
+            # Intervention type selection
             selected_type = st.radio(
-                "Select intervention type",
-                options=[opt["label"] if isinstance(opt, dict) else opt for opt in intervention_options],
-                label_visibility="collapsed",
-                key="intervention_type",
-                horizontal=False,
-                disabled=[isinstance(opt, dict) for opt in intervention_options]
+                "Intervention Type",
+                options=intervention_types,
+                key="intervention_type"
             )
-            
-            # Filter out category headers from final selection
-            if selected_type and selected_type.startswith("---"):
-                selected_type = None
             
             # Handle "Other" option
             final_intervention_type = selected_type
@@ -1323,9 +1295,33 @@ def show_interventions():
                 )
                 if other_type:
                     final_intervention_type = other_type
-                    
-            # Add submit button
-            submitted = st.form_submit_button("Add Intervention", key="add_intervention_submit")
+            
+            # Start date
+            start_date = st.date_input(
+                "Start Date", 
+                datetime.now(), 
+                key="new_intervention_start_date"
+            )
+            
+            # End date (shown if not ongoing)
+            end_date = None
+            if not is_ongoing:
+                end_date = st.date_input(
+                    "End Date",
+                    value=datetime.now(),
+                    min_value=start_date,
+                    key="new_intervention_end_date"
+                )
+            
+            # Notes field
+            notes = st.text_area(
+                "Notes", 
+                key="new_intervention_notes",
+                help="Add any relevant details about the intervention"
+            )
+            
+            # Submit button
+            submitted = st.form_submit_button("Add Intervention")
             
             if submitted:
                 try:
@@ -1354,60 +1350,8 @@ def show_interventions():
                     session.rollback()
                 finally:
                     session.close()
-                    
-            # Start date
-            start_date = st.date_input(
-                "Start Date", 
-                datetime.now(), 
-                key="new_intervention_start_date"
-            )
             
-            # End date (shown if not ongoing)
-            end_date = None
-            if not is_ongoing:
-                end_date = st.date_input(
-                    "End Date",
-                    value=datetime.now(),
-                    min_value=start_date,
-                    key="new_intervention_end_date"
-                )
-            
-            # Notes field
-            notes = st.text_area(
-                "Notes", 
-                key="new_intervention_notes",
-                help="Add any relevant details about the intervention"
-            )
-            
-            # Submit button
-            submitted = st.form_submit_button("Add Intervention", key="add_intervention_submit")
-            
-            if submitted:
-                try:
-                    # Validate that if "Other" is selected, a custom type was provided
-                    if selected_type == "Other" and not other_type:
-                        st.error("Please specify the intervention type for 'Other'")
-                        return
-                    
-                    # Add intervention to database
-                    new_intervention = Intervention(
-                        student_id=student.id,
-                        intervention_type=final_intervention_type,
-                        start_date=start_date,
-                        end_date=end_date if not is_ongoing else None,
-                        is_ongoing=is_ongoing,
-                        notes=notes if notes else None
-                    )
-                    
-                    session.add(new_intervention)
-                    session.commit()
-                    st.success("Intervention added successfully!")
-                    st.rerun()  # Refresh to show the new intervention
-                except Exception as e:
-                    st.error(f"Error adding intervention: {str(e)}")
-                    session.rollback()
-                finally:
-                    session.close()
+
             
     # Show student info and existing interventions in the right column
     if 'student' in locals():
