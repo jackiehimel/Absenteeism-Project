@@ -312,14 +312,15 @@ def show_data_upload():
     # Add custom CSS for data management tabs
     st.markdown("""
         <style>
-        /* Data Management Tabs - secondary navigation */
-        div[data-testid="stVerticalBlock"]:has(> div > div[data-testid="stHorizontalBlock"]:has(div[data-baseweb="tab-list"]):not(:first-child)) div[data-baseweb="tab-list"] {
+        /* Target data management section specifically */
+        section[data-testid="stSidebar"] ~ section div[data-testid="stVerticalBlock"]:has(div.block-container) div[data-baseweb="tab-list"] {
             justify-content: flex-start !important;
-            border-bottom: 1px solid #e5e7eb;
+            margin-left: 0 !important;
+            border-bottom: 1px solid #e5e7eb !important;
         }
-        div[data-testid="stVerticalBlock"]:has(> div > div[data-testid="stHorizontalBlock"]:has(div[data-baseweb="tab-list"]):not(:first-child)) [data-baseweb="tab"] {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
+        section[data-testid="stSidebar"] ~ section div[data-testid="stVerticalBlock"]:has(div.block-container) div[data-baseweb="tab"] {
+            font-size: 0.875rem !important;
+            padding: 0.5rem 1rem !important;
         }
         </style>
     """, unsafe_allow_html=True)
