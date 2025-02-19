@@ -454,29 +454,42 @@ def show_dashboard():
                 # Add extra spacing after tiers
                 st.markdown("<br><br>", unsafe_allow_html=True)
                 
-                # Show attendance patterns
+                # Show attendance insights
                 st.subheader("Attendance Insights")
                 
-                # Get demographic analysis
-                demo_data = get_demographic_analysis(grade=grade)
-                if demo_data and demo_data.get('welfare_patterns') is not None:
-                    # Create welfare status comparison
-                    welfare_data = demo_data['welfare_patterns']
-                    welfare_fig = go.Figure(data=[
-                        go.Bar(
-                            x=list(welfare_data.keys()),
-                            y=[d['avg_absence'] for d in welfare_data.values()],
-                            text=[f'{d["avg_absence"]:.1f}%<br>n={d["count"]}' for d in welfare_data.values()],
-                            textposition='auto',
-                            marker_color='#2563eb',
-                            hovertemplate='Status: %{x}<br>Avg Absence: %{y:.1f}%<extra></extra>'
-                        )
-                    ])
+                # Get attendance data
+                session = get_session()
+                query = session.query(
+                    Student.grade,
+                    AttendanceRecord.total_days,
+                    AttendanceRecord.present_days,
+                    AttendanceRecord.absent_days,
+                    AttendanceRecord.absent_percentage
+                ).join(AttendanceRecord)
+                
+                if grade:
+                    query = query.filter(Student.grade == grade)
+                
+                records = query.all()
+                
+                if records:
+                    # Convert to DataFrame
+                    df = pd.DataFrame(records, columns=['grade', 'total_days', 'present_days', 'absent_days', 'absent_percentage'])
                     
-                    welfare_fig.update_layout(
-                        title="Average Absence Rate by Welfare Status",
-                        xaxis_title="Welfare Status",
-                        yaxis_title="Average Absence Rate (%)",
+                    # 1. Absence Distribution
+                    fig1 = go.Figure()
+                    fig1.add_trace(go.Histogram(
+                        x=df['absent_percentage'],
+                        nbinsx=20,
+                        name='Students',
+                        marker_color='#2563eb',
+                        hovertemplate='Absence Rate: %{x:.1f}%<br>Count: %{y}<extra></extra>'
+                    ))
+                    
+                    fig1.update_layout(
+                        title='Distribution of Absence Rates',
+                        xaxis_title='Absence Rate (%)',
+                        yaxis_title='Number of Students',
                         showlegend=False,
                         margin=dict(l=40, r=20, t=40, b=40),
                         height=300,
@@ -484,36 +497,58 @@ def show_dashboard():
                         yaxis=dict(gridcolor='#e5e7eb')
                     )
                     
-                    st.plotly_chart(welfare_fig, use_container_width=True)
-                
-                # Get trends over time
-                trends = get_attendance_trends(grade=grade, interval='monthly')
-                if trends is not None:
-                    # Create time series plot
-                    trend_fig = go.Figure(data=[
-                        go.Scatter(
-                            x=trends.index,
-                            y=trends.values,
-                            mode='lines+markers',
-                            line=dict(color='#2563eb'),
-                            hovertemplate='Date: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
-                        )
-                    ])
+                    st.plotly_chart(fig1, use_container_width=True)
                     
-                    trend_fig.update_layout(
-                        title="Absence Rate Trend Over Time",
-                        xaxis_title="Date",
-                        yaxis_title="Average Absence Rate (%)",
+                    # 2. Attendance vs Total Days
+                    fig2 = go.Figure()
+                    fig2.add_trace(go.Scatter(
+                        x=df['total_days'],
+                        y=df['absent_percentage'],
+                        mode='markers',
+                        marker=dict(
+                            color='#2563eb',
+                            size=8,
+                            opacity=0.6
+                        ),
+                        hovertemplate='Total Days: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
+                    ))
+                    
+                    fig2.update_layout(
+                        title='Absence Rate vs. Total Days Enrolled',
+                        xaxis_title='Total Days Enrolled',
+                        yaxis_title='Absence Rate (%)',
                         showlegend=False,
                         margin=dict(l=40, r=20, t=40, b=40),
                         height=300,
                         plot_bgcolor='white',
-                        yaxis=dict(gridcolor='#e5e7eb')
+                        yaxis=dict(gridcolor='#e5e7eb'),
+                        xaxis=dict(gridcolor='#e5e7eb')
                     )
                     
-                    st.plotly_chart(trend_fig, use_container_width=True)
-                
-                if not demo_data and trends is None:
+                    st.plotly_chart(fig2, use_container_width=True)
+                    
+                    # 3. Summary Statistics
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric(
+                            "Average Absence Rate",
+                            f"{df['absent_percentage'].mean():.1f}%",
+                            help="Mean absence rate across all students"
+                        )
+                    with col2:
+                        st.metric(
+                            "Median Absence Rate",
+                            f"{df['absent_percentage'].median():.1f}%",
+                            help="Median absence rate (50th percentile)"
+                        )
+                    with col3:
+                        high_absence = (df['absent_percentage'] > 20).sum()
+                        st.metric(
+                            "Chronic Absences",
+                            f"{high_absence} students",
+                            help="Students with >20% absence rate"
+                        )
+                else:
                     st.warning("No attendance data available for the selected time period.")
             except Exception as e:
                 st.error(f"Error loading attendance data: {str(e)}")
