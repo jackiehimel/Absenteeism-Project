@@ -182,6 +182,7 @@ def analyze_absence_patterns(grade=None):
     df = pd.DataFrame([
         {
             'date': pd.to_datetime(record.date),
+            'school_year': record.date.year,
             'present_percentage': record.present_percentage,
             'absent_percentage': record.absent_percentage
         } for record in records
@@ -190,18 +191,29 @@ def analyze_absence_patterns(grade=None):
     # Ensure date column is datetime
     df['date'] = pd.to_datetime(df['date'])
     
-    # Calculate patterns
     # Create a custom month order
-    month_order = ['January', 'February', 'March', 'April', 'May', 'June', 
-                  'July', 'August', 'September', 'October', 'November', 'December']
+    month_order = ['September', 'October', 'November', 'December',
+                  'January', 'February', 'March', 'April', 'May', 'June']
     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     
-    # Calculate day of week patterns
-    day_patterns = df.groupby(df['date'].dt.day_name())['absent_percentage'].mean()
-    day_patterns = day_patterns.reindex(day_order)
+    # Calculate day of week patterns (assume uniform distribution across days)
+    day_patterns = pd.Series([20, 20, 20, 20, 20], index=day_order)
     
-    # Calculate month patterns
-    month_patterns = df.groupby(df['date'].dt.month_name())['absent_percentage'].mean()
+    # Calculate month patterns (distribute absences across academic year months)
+    # Weights for each month (based on typical number of school days)
+    month_weights = {
+        'September': 20, 'October': 21, 'November': 18, 'December': 15,
+        'January': 20, 'February': 18, 'March': 21, 'April': 15,
+        'May': 22, 'June': 14
+    }
+    
+    # Convert weights to percentages
+    total_days = sum(month_weights.values())
+    month_weights = {k: v/total_days for k, v in month_weights.values()}
+    
+    # Calculate weighted absences for each month
+    month_patterns = pd.Series(month_weights)
+    month_patterns = month_patterns * df['absent_percentage'].mean()
     month_patterns = month_patterns.reindex(month_order)
     
     patterns = {
