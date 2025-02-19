@@ -90,14 +90,15 @@ def main():
         div[data-testid="stHorizontalBlock"]:has(div[data-baseweb="tab-list"]) {
             margin-bottom: 2rem;
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
         }
         div[data-baseweb="tab-list"]:first-of-type {
             gap: 1.5rem;
             border-bottom: 3px solid #e5e7eb;
             padding-bottom: 0;
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
+            padding-left: 1rem;
         }
         div[data-baseweb="tab-list"]:first-of-type [data-baseweb="tab"] {
             height: 4rem;
