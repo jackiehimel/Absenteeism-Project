@@ -454,14 +454,67 @@ def show_dashboard():
                 # Add extra spacing after tiers
                 st.markdown("<br><br>", unsafe_allow_html=True)
                 
-                # Show attendance summary
-                st.subheader("Attendance Summary")
-                st.info("""
-                    Note: Our current data only shows total absences per academic year. 
-                    We don't have day-by-day attendance records to show which specific days 
-                    students were absent. To get this information, we would need daily 
-                    attendance records rather than just yearly totals.
-                    """)
+                # Show attendance patterns
+                st.subheader("Attendance Insights")
+                
+                # Get demographic analysis
+                demo_data = get_demographic_analysis(grade=grade)
+                if demo_data and demo_data.get('welfare_patterns') is not None:
+                    # Create welfare status comparison
+                    welfare_data = demo_data['welfare_patterns']
+                    welfare_fig = go.Figure(data=[
+                        go.Bar(
+                            x=list(welfare_data.keys()),
+                            y=[d['avg_absence'] for d in welfare_data.values()],
+                            text=[f'{d["avg_absence"]:.1f}%<br>n={d["count"]}' for d in welfare_data.values()],
+                            textposition='auto',
+                            marker_color='#2563eb',
+                            hovertemplate='Status: %{x}<br>Avg Absence: %{y:.1f}%<extra></extra>'
+                        )
+                    ])
+                    
+                    welfare_fig.update_layout(
+                        title="Average Absence Rate by Welfare Status",
+                        xaxis_title="Welfare Status",
+                        yaxis_title="Average Absence Rate (%)",
+                        showlegend=False,
+                        margin=dict(l=40, r=20, t=40, b=40),
+                        height=300,
+                        plot_bgcolor='white',
+                        yaxis=dict(gridcolor='#e5e7eb')
+                    )
+                    
+                    st.plotly_chart(welfare_fig, use_container_width=True)
+                
+                # Get trends over time
+                trends = get_attendance_trends(grade=grade, interval='monthly')
+                if trends is not None:
+                    # Create time series plot
+                    trend_fig = go.Figure(data=[
+                        go.Scatter(
+                            x=trends.index,
+                            y=trends.values,
+                            mode='lines+markers',
+                            line=dict(color='#2563eb'),
+                            hovertemplate='Date: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
+                        )
+                    ])
+                    
+                    trend_fig.update_layout(
+                        title="Absence Rate Trend Over Time",
+                        xaxis_title="Date",
+                        yaxis_title="Average Absence Rate (%)",
+                        showlegend=False,
+                        margin=dict(l=40, r=20, t=40, b=40),
+                        height=300,
+                        plot_bgcolor='white',
+                        yaxis=dict(gridcolor='#e5e7eb')
+                    )
+                    
+                    st.plotly_chart(trend_fig, use_container_width=True)
+                
+                if not demo_data and trends is None:
+                    st.warning("No attendance data available for the selected time period.")
             except Exception as e:
                 st.error(f"Error loading attendance data: {str(e)}")
 
