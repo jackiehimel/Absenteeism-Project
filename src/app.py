@@ -156,6 +156,27 @@ def main():
             border-radius: 6px;
         }
         
+        /* Intervention Details */
+        .streamlit-expanderHeader {
+            font-size: 1.1rem !important;
+            font-weight: 500 !important;
+            font-family: "Source Sans Pro", sans-serif !important;
+        }
+        .streamlit-expanderContent {
+            font-family: "Source Sans Pro", sans-serif;
+            font-size: 1rem;
+        }
+        .streamlit-expanderContent p {
+            margin: 0.5rem 0;
+            color: #374151;
+        }
+        .stButton button {
+            font-family: "Source Sans Pro", sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.375rem 1rem;
+        }
+        
         /* Cards and Containers */
         .info-card {
             background-color: white;
@@ -1384,10 +1405,10 @@ def show_interventions():
             st.markdown(
                 f"""<div style='padding: 1rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem;'>
                     <div style='display: flex; flex-direction: column; gap: 0.75rem; font-family: "Source Sans Pro", sans-serif;'>
-                        <div style='color: {text_color};'>{student.first_name} {student.last_name}</div>
-                        <div style='color: {text_color};'>Grade {student.grade}</div>
-                        <div style='color: {text_color};'>{attendance_rate:.1f}%</div>
-                        <div style='color: {text_color};'>{status_text}</div>
+                        <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Student:</span> {student.first_name} {student.last_name}</div>
+                        <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Grade:</span> {student.grade}</div>
+                        <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Attendance:</span> {attendance_rate:.1f}%</div>
+                        <div style='color: {text_color}; font-size: 1.1rem; font-weight: 500;'>{status_text}</div>
                     </div>
                 </div>""",
                 unsafe_allow_html=True
