@@ -314,51 +314,71 @@ def show_data_upload():
     with col1:
         data_section = st.radio("", ["Upload New Data", "Manage Existing Data"], label_visibility="collapsed")
     
-    with upload_tab:
+    if data_section == "Upload New Data":
         st.subheader("Upload Attendance Data")
+        
+        # Show upload instructions
+        st.markdown("""
+            ### Upload Instructions
+            Please ensure your Excel file follows these requirements:
+            
+            - File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)
+            - Required columns (case-sensitive):
+                - user_id
+                - class_label
+                - total_days
+                - present_days
+                - absent_days
+            - Optional columns:
+                - Welfare status
+                - NYF status
+                - OSIS ID Number
+        """, unsafe_allow_html=True)
+        
+        # Show file uploader
         uploaded_file = st.file_uploader("Upload Excel File", type=['xlsx'])
     
-    if uploaded_file:
-        try:
-            # Save the uploaded file
-            with st.spinner("Processing uploaded file..."):
-                # Get the data directory path
-                data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-                os.makedirs(data_dir, exist_ok=True)
-                
-                # Create a backup directory
-                backup_dir = os.path.join(data_dir, 'backup')
-                os.makedirs(backup_dir, exist_ok=True)
-                
-                # Save file with timestamp to prevent overwrites
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                safe_filename = f"{timestamp}_{uploaded_file.name}"
-                file_path = os.path.join(data_dir, safe_filename)
-                
-                # Save main copy
-                with open(file_path, "wb") as f:
-                    file_content = uploaded_file.getbuffer()
-                    f.write(file_content)
-                
-                # Save backup copy
-                backup_path = os.path.join(backup_dir, safe_filename)
-                with open(backup_path, "wb") as f:
-                    f.write(file_content)
-                
-                # Import the data
-                from data_import import import_excel_data
-                import_excel_data(file_path)
-                
-                st.success(f"Successfully imported and backed up data from {uploaded_file.name}")
-                
-                # Show the user where their data is stored
-                st.info(f"Your data has been permanently stored in the database and backed up to: {backup_dir}")
-                
-                # Refresh the page to show new data
-                st.rerun()
-        except Exception as e:
-            st.error(f"Error importing data: {str(e)}")
-            st.error("Please make sure your file follows the required format and column names.")
+        if uploaded_file:
+            try:
+                # Save the uploaded file
+                with st.spinner("Processing uploaded file..."):
+                    # Get the data directory path
+                    data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+                    os.makedirs(data_dir, exist_ok=True)
+                    
+                    # Create a backup directory
+                    backup_dir = os.path.join(data_dir, 'backup')
+                    os.makedirs(backup_dir, exist_ok=True)
+                    
+                    # Save file with timestamp to prevent overwrites
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    safe_filename = f"{timestamp}_{uploaded_file.name}"
+                    file_path = os.path.join(data_dir, safe_filename)
+                    
+                    # Save main copy
+                    with open(file_path, "wb") as f:
+                        file_content = uploaded_file.getbuffer()
+                        f.write(file_content)
+                    
+                    # Save backup copy
+                    backup_path = os.path.join(backup_dir, safe_filename)
+                    with open(backup_path, "wb") as f:
+                        f.write(file_content)
+                    
+                    # Import the data
+                    from data_import import import_excel_data
+                    import_excel_data(file_path)
+                    
+                    st.success(f"Successfully imported and backed up data from {uploaded_file.name}")
+                    
+                    # Show the user where their data is stored
+                    st.info(f"Your data has been permanently stored in the database and backed up to: {backup_dir}")
+                    
+                    # Refresh the page to show new data
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Error importing data: {str(e)}")
+                st.error("Please make sure your file follows the required format and column names.")
     
     else:  # Manage Existing Data
         st.subheader("Manage Uploaded Files")
@@ -418,24 +438,7 @@ def show_data_upload():
                             except Exception as e:
                                 st.error(f"Error restoring file: {str(e)}")
     
-    # Show upload instructions
-    with upload_tab:
-        st.markdown("""
-            ### Upload Instructions
-            Please ensure your Excel file follows these requirements:
-            
-            - File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)
-            - Required columns (case-sensitive):
-                - user_id
-                - class_label
-                - total_days
-                - present_days
-                - absent_days
-            - Optional columns:
-                - Welfare status
-            - NYF status
-            - OSIS ID Number
-    """, unsafe_allow_html=True)
+
 
 def show_dashboard():
     # Get earliest and latest dates from the database
