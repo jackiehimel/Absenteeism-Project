@@ -309,6 +309,21 @@ def main():
 def show_data_upload():
     st.header("Data Management")
     
+    # Add custom CSS for data management tabs
+    st.markdown("""
+        <style>
+        /* Data Management Tabs - secondary navigation */
+        div[data-testid="stVerticalBlock"]:has(> div > div[data-testid="stHorizontalBlock"]:has(div[data-baseweb="tab-list"]):not(:first-child)) div[data-baseweb="tab-list"] {
+            justify-content: flex-start !important;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        div[data-testid="stVerticalBlock"]:has(> div > div[data-testid="stHorizontalBlock"]:has(div[data-baseweb="tab-list"]):not(:first-child)) [data-baseweb="tab"] {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # Create tabs for upload and management
     upload_tab, manage_tab = st.tabs(["Upload New Data", "Manage Existing Data"])
     
