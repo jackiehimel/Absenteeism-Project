@@ -1118,15 +1118,11 @@ def show_interventions():
         # Display student info in a styled card
         st.markdown(
             f"""<div style='padding: 1rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem;'>
-                <div style='display: flex; flex-direction: column; gap: 0.5rem;'>
-                    <div style='display: flex; align-items: baseline; gap: 0.5rem;'>
-                        <span style='color: {text_color}; font-size: 1rem; font-weight: 500;'>{student.first_name} {student.last_name}</span>
-                        <span style='color: {text_color}; font-size: 0.875rem;'>{attendance_rate:.1f}% •</span>
-                        <span style='color: {text_color}; font-size: 0.875rem;'>{status_text}</span>
-                    </div>
-                    <div>
-                        <span style='color: {text_color}; font-size: 0.875rem;'>Grade {student.grade}</span>
-                    </div>
+                <div style='display: flex; flex-direction: column; gap: 0.75rem; font-family: "Source Sans Pro", sans-serif;'>
+                    <div style='color: {text_color};'>{student.first_name} {student.last_name}</div>
+                    <div style='color: {text_color};'>Grade {student.grade}</div>
+                    <div style='color: {text_color};'>{attendance_rate:.1f}%</div>
+                    <div style='color: {text_color};'>{status_text}</div>
                 </div>
             </div>""",
             unsafe_allow_html=True
