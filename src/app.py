@@ -291,23 +291,11 @@ def show_dashboard():
     if earliest_record and latest_record:
         earliest_date = earliest_record[0]
         latest_date = latest_record[0]
-        
-        # Adjust the date range to show the full academic year
-        if earliest_date.month >= 9:  # If we start in or after September
-            start_year = earliest_date.year
-        else:
-            start_year = earliest_date.year - 1
-        earliest_date = earliest_date.replace(year=start_year, month=9, day=1)
-        
-        if latest_date.month >= 9:  # If we end in or after September
-            end_year = latest_date.year + 1
-        else:
-            end_year = latest_date.year
-        latest_date = latest_date.replace(year=end_year, month=6, day=19)
     else:
         # Fallback dates only if database is completely empty
-        earliest_date = datetime.now().date().replace(month=9, day=1)  # Default to Sept 1st of current year
-        latest_date = earliest_date.replace(year=earliest_date.year + 1, month=6, day=19)  # Default to June 19th next year
+        current_date = datetime.now().date()
+        earliest_date = current_date - timedelta(days=180)  # Default to 6 months ago
+        latest_date = current_date
     
     # Time period selector
     st.markdown("""
