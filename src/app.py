@@ -1239,7 +1239,7 @@ def show_interventions():
         st.subheader("Add New Intervention")
         
         # Student selection with ID and name at the top of the form
-        student_options = [f"{s.id} - {s.first_name} {s.last_name}" for s in students]
+        student_options = [f"Student {s.id}" for s in students]
         selected_student = st.selectbox(
             "Select Student",
             student_options,
@@ -1247,7 +1247,7 @@ def show_interventions():
         )
         
         if selected_student:
-            student_id = int(selected_student.split(' - ')[0])
+            student_id = int(selected_student.split(' ')[1])
             student = session.query(Student).get(student_id)
             
             # Ongoing checkbox outside form
@@ -1288,26 +1288,30 @@ def show_interventions():
                 "Other": ["Other"]
             }
             
-            # Create a list of all options for the radio button
-            intervention_type_options = [opt for opts in intervention_categories.values() for opt in opts]
+            # Intervention type selection with categories
+            st.markdown("##### Intervention Type")
             
-            # Select intervention type
+            # Create list of options with category headers
+            intervention_options = []
+            for category, options in intervention_categories.items():
+                # Add category header
+                intervention_options.append({"label": f"--- {category} ---", "disabled": True})
+                # Add options
+                intervention_options.extend(options)
+            
+            # Single radio group for intervention type
             selected_type = st.radio(
-                "Choose an intervention type",
-                options=intervention_type_options,
+                "Select intervention type",
+                options=[opt["label"] if isinstance(opt, dict) else opt for opt in intervention_options],
                 label_visibility="collapsed",
-                horizontal=True,
-                key="intervention_type"
+                key="intervention_type",
+                horizontal=False,
+                disabled=[isinstance(opt, dict) for opt in intervention_options]
             )
             
-            # Show categories with selected highlighting
-            for category, options in intervention_categories.items():
-                st.markdown(f"<small>{category}</small>", unsafe_allow_html=True)
-                for option in options:
-                    if option == selected_type:
-                        st.markdown(f"<div style='margin-left: 1rem; color: #2563eb;'>▸ {option}</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div style='margin-left: 1rem; color: #666;'>• {option}</div>", unsafe_allow_html=True)
+            # Filter out category headers from final selection
+            if selected_type and selected_type.startswith("---"):
+                selected_type = None
             
             # Handle "Other" option
             final_intervention_type = selected_type
@@ -1321,7 +1325,7 @@ def show_interventions():
                     final_intervention_type = other_type
                     
             # Add submit button
-            submitted = st.form_submit_button("Add Intervention")
+            submitted = st.form_submit_button("Add Intervention", key="add_intervention_submit")
             
             if submitted:
                 try:
@@ -1374,27 +1378,6 @@ def show_interventions():
                 key="new_intervention_notes",
                 help="Add any relevant details about the intervention"
             )
-            
-            # Submit button
-            submitted = st.form_submit_button("Add Intervention")
-            
-            if submitted:
-                try:
-                    # Validate that if "Other" is selected, a custom type was provided
-                    if selected_type == "Other" and not other_type:
-                        st.error("Please specify the intervention type for 'Other'")
-                        return
-                        
-                    # Validate dates
-                    if end_date and end_date < start_date:
-                        st.error("End date must be after start date")
-                        return
-                        
-                    # Add intervention to database
-                    new_intervention = Intervention(
-                        student_id=student.id,
-                        intervention_type=final_intervention_type,
-                        start_date=start_date,
                         end_date=end_date,  # This will be None for ongoing interventions
                         is_ongoing=is_ongoing,
                         notes=notes if notes else None
