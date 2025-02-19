@@ -156,29 +156,46 @@ def main():
             border-radius: 6px;
         }
         
-        /* Intervention Details */
+        /* Global font settings */
+        .main, .element-container, div[data-testid="stVerticalBlock"] {
+            font-family: "Source Sans Pro", sans-serif !important;
+        }
+        
+        /* Headers */
         .streamlit-expanderHeader {
             font-family: "Source Sans Pro", sans-serif !important;
             font-size: 1rem !important;
             font-weight: 500 !important;
             color: #1f2937 !important;
             padding: 0.75rem 1rem !important;
+            background: white !important;
         }
         
+        /* Expander content */
         .streamlit-expanderContent {
             font-family: "Source Sans Pro", sans-serif !important;
             padding: 1rem !important;
+            font-size: 1rem !important;
+            color: #1f2937 !important;
+            background: white !important;
         }
         
-        .streamlit-expanderContent p {
+        /* All text elements */
+        .streamlit-expanderContent div,
+        .streamlit-expanderContent span,
+        .streamlit-expanderContent p,
+        .stMarkdown div,
+        .stMarkdown p {
             font-family: "Source Sans Pro", sans-serif !important;
             font-size: 1rem !important;
-            margin: 0.5rem 0 !important;
-            color: #1f2937 !important;
             line-height: 1.5 !important;
+            margin: 0.5rem 0 !important;
         }
         
-        .streamlit-expanderContent strong {
+        /* Labels */
+        .streamlit-expanderContent span[style*="font-weight: 500"],
+        .stMarkdown strong {
+            font-family: "Source Sans Pro", sans-serif !important;
             font-weight: 500 !important;
             color: #4b5563 !important;
         }
@@ -1432,10 +1449,21 @@ def show_interventions():
             st.markdown(
                 f"""<div style='padding: 1rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem;'>
                     <div style='display: flex; flex-direction: column; gap: 0.75rem; font-family: "Source Sans Pro", sans-serif;'>
-                        <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Student:</span> {student.first_name} {student.last_name}</div>
-                        <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Grade:</span> {student.grade}</div>
-                        <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Attendance:</span> {attendance_rate:.1f}%</div>
-                        <div style='color: {status_text_color}; font-size: 1.1rem; font-weight: 500;'>{status_text}</div>
+                        <div style='color: #1f2937; font-size: 1rem;'>
+                            <span style='font-weight: 500; color: #4b5563; display: inline-block; width: 100px;'>Student:</span>
+                            {student.first_name} {student.last_name}
+                        </div>
+                        <div style='color: #1f2937; font-size: 1rem;'>
+                            <span style='font-weight: 500; color: #4b5563; display: inline-block; width: 100px;'>Grade:</span>
+                            {student.grade}
+                        </div>
+                        <div style='color: #1f2937; font-size: 1rem;'>
+                            <span style='font-weight: 500; color: #4b5563; display: inline-block; width: 100px;'>Attendance:</span>
+                            {attendance_rate:.1f}%
+                        </div>
+                        <div style='color: {status_text_color}; font-size: 1rem; font-weight: 500; margin-left: 100px;'>
+                            {status_text}
+                        </div>
                     </div>
                 </div>""",
                 unsafe_allow_html=True
@@ -1455,10 +1483,10 @@ def show_interventions():
                         
                         with details_col:
                             # Show current details
-                            st.markdown(f'''<div style="font-family: 'Source Sans Pro', sans-serif; font-size: 1rem;">
-                                <p style="margin: 0.5rem 0; color: #1f2937;"><strong>Start Date:</strong> {intervention.start_date}</p>
-                                {f'<p style="margin: 0.5rem 0; color: #1f2937;"><strong>End Date:</strong> {intervention.end_date}</p>' if not intervention.is_ongoing and intervention.end_date else ''}
-                                <p style="margin: 0.5rem 0; color: #1f2937;"><strong>Notes:</strong> {intervention.notes}</p>
+                            st.markdown(f'''<div style="font-family: 'Source Sans Pro', sans-serif;">
+                                <div style="margin: 0.5rem 0; color: #1f2937; font-size: 1rem;"><span style="font-weight: 500; color: #4b5563; display: inline-block; width: 100px;">Start Date:</span> {intervention.start_date}</div>
+                                {f'<div style="margin: 0.5rem 0; color: #1f2937; font-size: 1rem;"><span style="font-weight: 500; color: #4b5563; display: inline-block; width: 100px;">End Date:</span> {intervention.end_date}</div>' if not intervention.is_ongoing and intervention.end_date else ''}
+                                <div style="margin: 0.5rem 0; color: #1f2937; font-size: 1rem;"><span style="font-weight: 500; color: #4b5563; display: inline-block; width: 100px;">Notes:</span> {intervention.notes}</div>
                             </div>''', unsafe_allow_html=True)
                         
                         with edit_col:
