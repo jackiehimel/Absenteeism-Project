@@ -1196,8 +1196,15 @@ def show_interventions():
                 "Other"
             ]
             
-            # Use radio buttons for intervention type
-            st.write("Intervention Type")
+            # Use radio buttons for intervention type with styled header
+            st.markdown(
+                """
+                <div style='background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>
+                    <h3 style='margin: 0; color: #0e1117; font-size: 1rem;'>Intervention Type</h3>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
             selected_type = st.radio(
                 label="Choose an intervention type",
                 options=intervention_type_options,
