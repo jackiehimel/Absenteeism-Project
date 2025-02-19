@@ -400,58 +400,57 @@ def show_dashboard():
                     )
                 
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # Show attendance tiers
+                tiers = get_tiered_attendance(grade=grade)
+                if tiers:
+                    total_students = sum(len(tier) for tier in tiers.values())
                     
-                    # Show attendance tiers
-                    tiers = get_tiered_attendance(grade=grade)
-                    if tiers:
-                        total_students = sum(len(tier) for tier in tiers.values())
-                        
-                        # Tier metrics header
-                        st.subheader("Attendance Tiers")
-                        
-                        # Create tier boxes with better styling
-                        tier_cols = st.columns(4)
-                        
-                        with tier_cols[0]:
-                            chronic_count = len(tiers['tier3'])
-                            st.markdown(f"""
-                                <div style='background-color: #fee2e2; border: 1px solid #fecaca; padding: 1rem; border-radius: 0.5rem;'>
-                                    <h4 style='color: #991b1b; margin: 0; font-size: 1rem;'>Tier 3 (Chronic)</h4>
-                                    <p style='color: #dc2626; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{chronic_count} students</p>
-                                    <p style='margin: 0; color: #991b1b;'>{chronic_count/total_students*100:.1f}%</p>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        
-                        with tier_cols[1]:
-                            at_risk_count = len(tiers['tier2'])
-                            st.markdown(f"""
-                                <div style='background-color: #fef3c7; border: 1px solid #fde68a; padding: 1rem; border-radius: 0.5rem;'>
-                                    <h4 style='color: #92400e; margin: 0; font-size: 1rem;'>Tier 2 (At Risk)</h4>
-                                    <p style='color: #d97706; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{at_risk_count} students</p>
-                                    <p style='margin: 0; color: #92400e;'>{at_risk_count/total_students*100:.1f}%</p>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        
-                        with tier_cols[2]:
-                            warning_count = len(tiers['tier1'])
-                            st.markdown(f"""
-                                <div style='background-color: #dbeafe; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 0.5rem;'>
-                                    <h4 style='color: #1e40af; margin: 0; font-size: 1rem;'>Tier 1 (Warning)</h4>
-                                    <p style='color: #2563eb; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{warning_count} students</p>
-                                    <p style='margin: 0; color: #1e40af;'>{warning_count/total_students*100:.1f}%</p>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        
-                        with tier_cols[3]:
-                            on_track_count = len(tiers['on_track'])
-                            st.markdown(f"""
-                                <div style='background-color: #dcfce7; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 0.5rem;'>
-                                    <h4 style='color: #166534; margin: 0; font-size: 1rem;'>On Track</h4>
-                                    <p style='color: #16a34a; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{on_track_count} students</p>
-                                    <p style='margin: 0; color: #166534;'>{on_track_count/total_students*100:.1f}%</p>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        
+                    # Tier metrics header
+                    st.subheader("Attendance Tiers")
+                    
+                    # Create tier boxes with better styling
+                    tier_cols = st.columns(4)
+                    
+                    with tier_cols[0]:
+                        chronic_count = len(tiers['tier3'])
+                        st.markdown(f"""
+                            <div style='background-color: #fee2e2; border: 1px solid #fecaca; padding: 1rem; border-radius: 0.5rem;'>
+                                <h4 style='color: #991b1b; margin: 0; font-size: 1rem;'>Tier 3 (Chronic)</h4>
+                                <p style='color: #dc2626; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{chronic_count} students</p>
+                                <p style='margin: 0; color: #991b1b;'>{chronic_count/total_students*100:.1f}%</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with tier_cols[1]:
+                        at_risk_count = len(tiers['tier2'])
+                        st.markdown(f"""
+                            <div style='background-color: #fef3c7; border: 1px solid #fde68a; padding: 1rem; border-radius: 0.5rem;'>
+                                <h4 style='color: #92400e; margin: 0; font-size: 1rem;'>Tier 2 (At Risk)</h4>
+                                <p style='color: #d97706; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{at_risk_count} students</p>
+                                <p style='margin: 0; color: #92400e;'>{at_risk_count/total_students*100:.1f}%</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with tier_cols[2]:
+                        warning_count = len(tiers['tier1'])
+                        st.markdown(f"""
+                            <div style='background-color: #dbeafe; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 0.5rem;'>
+                                <h4 style='color: #1e40af; margin: 0; font-size: 1rem;'>Tier 1 (Warning)</h4>
+                                <p style='color: #2563eb; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{warning_count} students</p>
+                                <p style='margin: 0; color: #1e40af;'>{warning_count/total_students*100:.1f}%</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with tier_cols[3]:
+                        on_track_count = len(tiers['on_track'])
+                        st.markdown(f"""
+                            <div style='background-color: #dcfce7; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 0.5rem;'>
+                                <h4 style='color: #166534; margin: 0; font-size: 1rem;'>On Track</h4>
+                                <p style='color: #16a34a; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{on_track_count} students</p>
+                                <p style='margin: 0; color: #166534;'>{on_track_count/total_students*100:.1f}%</p>
+                            </div>
+                        """, unsafe_allow_html=True)
                         # Show absence patterns
                         patterns = analyze_absence_patterns(grade=grade)
                         if patterns:
