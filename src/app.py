@@ -242,7 +242,6 @@ def main():
 def show_data_upload():
     st.header("Data Upload")
     
-    st.markdown("<div class='info-card'>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload Attendance Data", type=['xlsx'])
     
     if uploaded_file:
@@ -268,33 +267,22 @@ def show_data_upload():
             st.error(f"Error importing data: {str(e)}")
             st.error("Please make sure your file follows the required format and column names.")
     
-    st.markdown("</div>", unsafe_allow_html=True)
-    
     # Show upload instructions with more detail
     st.markdown("""
-    <div class='info-card'>
-        <h3>Upload Instructions</h3>
-        <p>Please ensure your Excel file follows these requirements:</p>
-        <ul>
-            <li>File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)</li>
-            <li>Required columns (case-sensitive):
-                <ul>
-                    <li>user_id</li>
-                    <li>class_label</li>
-                    <li>total_days</li>
-                    <li>present_days</li>
-                    <li>absent_days</li>
-                </ul>
-            </li>
-            <li>Optional columns:
-                <ul>
-                    <li>Welfare status</li>
-                    <li>NYF status</li>
-                    <li>OSIS ID Number</li>
-                </ul>
-            </li>
-        </ul>
-    </div>
+        ### Upload Instructions
+        Please ensure your Excel file follows these requirements:
+        
+        - File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)
+        - Required columns (case-sensitive):
+            - user_id
+            - class_label
+            - total_days
+            - present_days
+            - absent_days
+        - Optional columns:
+            - Welfare status
+            - NYF status
+            - OSIS ID Number
     """, unsafe_allow_html=True)
 
 def show_dashboard():
@@ -421,12 +409,8 @@ def show_dashboard():
                     if tiers:
                         total_students = sum(len(tier) for tier in tiers.values())
                         
-                        # Tier metrics in a container with a light background
-                        st.markdown("""
-                            <div style='background-color: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 2rem 0;'>
-                                <h3 style='margin: 0 0 1.5rem 0; color: #374151; font-size: 1.2rem;'>Attendance Tiers</h3>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        # Tier metrics header
+                        st.subheader("Attendance Tiers")
                         
                         # Create tier boxes with better styling
                         tier_cols = st.columns(4)
@@ -434,40 +418,40 @@ def show_dashboard():
                         with tier_cols[0]:
                             chronic_count = len(tiers['tier3'])
                             st.markdown(f"""
-                                <div class='tier-box' style='background-color: #fee2e2; border: 1px solid #fecaca;'>
-                                    <h4 style='color: #991b1b;'>Tier 3 (Chronic)</h4>
-                                    <p style='font-size: 1.3rem; color: #dc2626;'>{chronic_count} students</p>
-                                    <p>{chronic_count/total_students*100:.1f}%</p>
+                                <div style='background-color: #fee2e2; border: 1px solid #fecaca; padding: 1rem; border-radius: 0.5rem;'>
+                                    <h4 style='color: #991b1b; margin: 0; font-size: 1rem;'>Tier 3 (Chronic)</h4>
+                                    <p style='color: #dc2626; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{chronic_count} students</p>
+                                    <p style='margin: 0; color: #991b1b;'>{chronic_count/total_students*100:.1f}%</p>
                                 </div>
                             """, unsafe_allow_html=True)
                         
                         with tier_cols[1]:
                             at_risk_count = len(tiers['tier2'])
                             st.markdown(f"""
-                                <div class='tier-box' style='background-color: #fef3c7; border: 1px solid #fde68a;'>
-                                    <h4 style='color: #92400e;'>Tier 2 (At Risk)</h4>
-                                    <p style='font-size: 1.3rem; color: #d97706;'>{at_risk_count} students</p>
-                                    <p>{at_risk_count/total_students*100:.1f}%</p>
+                                <div style='background-color: #fef3c7; border: 1px solid #fde68a; padding: 1rem; border-radius: 0.5rem;'>
+                                    <h4 style='color: #92400e; margin: 0; font-size: 1rem;'>Tier 2 (At Risk)</h4>
+                                    <p style='color: #d97706; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{at_risk_count} students</p>
+                                    <p style='margin: 0; color: #92400e;'>{at_risk_count/total_students*100:.1f}%</p>
                                 </div>
                             """, unsafe_allow_html=True)
                         
                         with tier_cols[2]:
                             warning_count = len(tiers['tier1'])
                             st.markdown(f"""
-                                <div class='tier-box' style='background-color: #dbeafe; border: 1px solid #bfdbfe;'>
-                                    <h4 style='color: #1e40af;'>Tier 1 (Warning)</h4>
-                                    <p style='font-size: 1.3rem; color: #2563eb;'>{warning_count} students</p>
-                                    <p>{warning_count/total_students*100:.1f}%</p>
+                                <div style='background-color: #dbeafe; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 0.5rem;'>
+                                    <h4 style='color: #1e40af; margin: 0; font-size: 1rem;'>Tier 1 (Warning)</h4>
+                                    <p style='color: #2563eb; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{warning_count} students</p>
+                                    <p style='margin: 0; color: #1e40af;'>{warning_count/total_students*100:.1f}%</p>
                                 </div>
                             """, unsafe_allow_html=True)
                         
                         with tier_cols[3]:
                             on_track_count = len(tiers['on_track'])
                             st.markdown(f"""
-                                <div class='tier-box' style='background-color: #dcfce7; border: 1px solid #bbf7d0;'>
-                                    <h4 style='color: #166534;'>On Track</h4>
-                                    <p style='font-size: 1.3rem; color: #16a34a;'>{on_track_count} students</p>
-                                    <p>{on_track_count/total_students*100:.1f}%</p>
+                                <div style='background-color: #dcfce7; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 0.5rem;'>
+                                    <h4 style='color: #166534; margin: 0; font-size: 1rem;'>On Track</h4>
+                                    <p style='color: #16a34a; margin: 0.5rem 0; font-size: 1.25rem; font-weight: 600;'>{on_track_count} students</p>
+                                    <p style='margin: 0; color: #166534;'>{on_track_count/total_students*100:.1f}%</p>
                                 </div>
                             """, unsafe_allow_html=True)
                         
@@ -538,20 +522,15 @@ def show_student_details():
         st.info("No students found in the database")
         return
     
-    # Student selector in a styled container
-    st.markdown("<div class='info-card'>", unsafe_allow_html=True)
+    # Student selector
     student_ids = [s.id for s in students]
     student_id = st.selectbox("Select Student", student_ids, key="student_details_select")
-    st.markdown("</div>", unsafe_allow_html=True)
     
     if student_id:
         student = session.query(Student).get(student_id)
         
         # Student information section
         st.subheader("Student Information")
-        
-        # Main info card
-        st.markdown("<div class='info-card'>", unsafe_allow_html=True)
         col1, col2 = st.columns([2, 1])
         
         with col1:
@@ -587,11 +566,9 @@ def show_student_details():
                     st.markdown("<div class='status-card status-danger'>Chronic Absence</div>", unsafe_allow_html=True)
             else:
                 st.info("No attendance data available")
-        st.markdown("</div>", unsafe_allow_html=True)
-        
+
         # Attendance History section
         st.subheader("Attendance History")
-        st.markdown("<div class='info-card'>", unsafe_allow_html=True)
         attendance_records = session.query(AttendanceRecord).filter(
             AttendanceRecord.student_id == student.id
         ).order_by(AttendanceRecord.date.desc()).all()
@@ -640,7 +617,6 @@ def show_student_details():
                 st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No attendance history available")
-        st.markdown("</div>", unsafe_allow_html=True)
         
         # Show attendance history
         st.subheader("Attendance History")
@@ -686,13 +662,11 @@ def show_chronic_absenteeism():
         return
     
     # Grade selector with only available grades
-    st.markdown("<div class='info-card'>", unsafe_allow_html=True)
     grade = st.selectbox(
         "Select Grade", 
         [None] + available_grades, 
         format_func=lambda x: 'All Grades' if x is None else f'Grade {x}'
     )
-    st.markdown("</div>", unsafe_allow_html=True)
     
     # Get tiered attendance data
     tiers = get_tiered_attendance(grade=grade)
@@ -898,14 +872,12 @@ def show_demographics():
         return
     
     # Grade selector with only available grades
-    st.markdown("<div class='info-card'>", unsafe_allow_html=True)
     grade = st.selectbox(
         "Select Grade", 
         [None] + available_grades, 
         format_func=lambda x: 'All Grades' if x is None else f'Grade {x}',
         key="demographics_grade_select"
     )
-    st.markdown("</div>", unsafe_allow_html=True)
     
     # Get demographic analysis
     students = session.query(Student)
@@ -945,7 +917,6 @@ def show_demographics():
     
     # Show overall metrics
     st.subheader("Overall Metrics")
-    st.markdown("<div class='info-card'>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -1001,7 +972,7 @@ def show_demographics():
             text=text_labels,
             title='At-Risk Students by Grade (Attendance Below 85%)',
             labels={'Count': 'Number of Students'},
-            color_discrete_sequence=['#dc2626']
+            color_discrete_sequence=['#f87171']
         )
         
         fig.update_layout(
@@ -1174,7 +1145,8 @@ def show_interventions():
         
         # Add new intervention
         st.subheader("Add New Intervention")
-        with st.form("new_intervention"):
+        with st.form(key="new_intervention_form"):
+            # Intervention type selection
             intervention_type_options = [
                 "Point Person",
                 "Home Visits",
@@ -1195,55 +1167,79 @@ def show_interventions():
             
             selected_type = st.selectbox(
                 "Intervention Type",
-                intervention_type_options
+                intervention_type_options,
+                key="intervention_type_select"
             )
             
             # Show text input for "Other" option
             final_intervention_type = selected_type
             if selected_type == "Other":
-                other_type = st.text_input("Please specify the intervention type")
+                other_type = st.text_input("Please specify the intervention type", key="other_type_input")
                 if other_type:
                     final_intervention_type = other_type
+                    
+            # Start date
+            start_date = st.date_input("Start Date", datetime.now(), key="intervention_start_date")
             
-            # Date inputs
-            col1, col2 = st.columns(2)
-            with col1:
-                start_date = st.date_input("Start Date", datetime.now())
-            with col2:
-                is_ongoing = st.checkbox("Intervention is ongoing", value=True)
-                if not is_ongoing:
-                    end_date = st.date_input("End Date", datetime.now())
-                else:
-                    end_date = None
+            # Status selection
+            intervention_status = st.radio(
+                "Intervention Status",
+                options=["Ongoing", "Completed"],
+                horizontal=True,
+                key="intervention_status"
+            )
             
-            notes = st.text_area("Notes")
+            # End date field appears when Completed is selected
+            end_date = None
+            if intervention_status == "Completed":
+                end_date = st.date_input(
+                    "End Date",
+                    value=start_date,  # Default to start date
+                    min_value=start_date,  # Cannot be before start date
+                    max_value=datetime.now().date(),  # Cannot be in the future
+                    help="Must be after the start date and not in the future",
+                    key="intervention_end_date"
+                )
+            else:
+                end_date = None
             
+            # Set is_ongoing based on status
+            is_ongoing = (intervention_status == "Ongoing")
+            
+            # Notes field
+            notes = st.text_area("Notes", key="notes")
+            
+            # Submit button
             if st.form_submit_button("Add Intervention"):
                 try:
                     # Validate that if "Other" is selected, a custom type was provided
                     if selected_type == "Other" and not other_type:
                         st.error("Please specify the intervention type for 'Other'")
                         return
-                    
-                    # Validate end date is after start date
-                    if end_date and end_date < start_date:
+                        
+                    # Validate dates
+                    if intervention_status == "Completed" and end_date and end_date < start_date:
                         st.error("End date must be after start date")
                         return
-                    
+                        
+                    # Add intervention to database
                     new_intervention = Intervention(
                         student_id=student.id,
                         intervention_type=final_intervention_type,
                         start_date=start_date,
-                        end_date=end_date,
-                        is_ongoing=is_ongoing,
-                        notes=notes
+                        end_date=end_date,  # This will be None for ongoing interventions
+                        is_ongoing=(intervention_status == "Ongoing"),
+                        notes=notes if notes else None
                     )
+                    
                     session.add(new_intervention)
                     session.commit()
                     st.success("Intervention added successfully!")
-                    st.rerun()
+                    st.rerun()  # Refresh to show the new intervention
+                    
                 except Exception as e:
                     st.error(f"Error adding intervention: {str(e)}")
+                    session.rollback()
                 finally:
                     session.close()
 
