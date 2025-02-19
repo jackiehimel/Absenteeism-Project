@@ -238,9 +238,14 @@ def main():
         show_data_upload()
 
 def show_data_upload():
-    st.header("Data Upload")
+    st.header("Data Management")
     
-    uploaded_file = st.file_uploader("Upload Attendance Data", type=['xlsx'])
+    # Create tabs for upload and management
+    upload_tab, manage_tab = st.tabs(["Upload New Data", "Manage Existing Data"])
+    
+    with upload_tab:
+        st.subheader("Upload Attendance Data")
+        uploaded_file = st.file_uploader("Upload Excel File", type=['xlsx'])
     
     if uploaded_file:
         try:
@@ -284,20 +289,79 @@ def show_data_upload():
             st.error(f"Error importing data: {str(e)}")
             st.error("Please make sure your file follows the required format and column names.")
     
-    # Show upload instructions with more detail
-    st.markdown("""
-        ### Upload Instructions
-        Please ensure your Excel file follows these requirements:
+    with manage_tab:
+        st.subheader("Manage Uploaded Files")
         
-        - File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)
-        - Required columns (case-sensitive):
-            - user_id
-            - class_label
-            - total_days
-            - present_days
-            - absent_days
-        - Optional columns:
-            - Welfare status
+        # Get the data directory path
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        backup_dir = os.path.join(data_dir, 'backup')
+        
+        # Get list of files in both directories
+        data_files = [f for f in os.listdir(data_dir) if f.endswith('.xlsx')] if os.path.exists(data_dir) else []
+        backup_files = [f for f in os.listdir(backup_dir) if f.endswith('.xlsx')] if os.path.exists(backup_dir) else []
+        
+        if not data_files and not backup_files:
+            st.info("No data files have been uploaded yet.")
+        else:
+            # Show files in main directory
+            if data_files:
+                st.markdown("##### Active Data Files")
+                for file in data_files:
+                    col1, col2, col3 = st.columns([3, 1, 1])
+                    with col1:
+                        st.text(file)
+                    with col2:
+                        if st.button("View", key=f"view_{file}"):
+                            try:
+                                df = pd.read_excel(os.path.join(data_dir, file))
+                                st.dataframe(df)
+                            except Exception as e:
+                                st.error(f"Error reading file: {str(e)}")
+                    with col3:
+                        if st.button("Remove", key=f"remove_{file}"):
+                            try:
+                                os.remove(os.path.join(data_dir, file))
+                                st.success(f"Removed {file}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error removing file: {str(e)}")
+            
+            # Show files in backup directory
+            if backup_files:
+                st.markdown("##### Backup Files")
+                for file in backup_files:
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        st.text(file)
+                    with col2:
+                        if st.button("Restore", key=f"restore_{file}"):
+                            try:
+                                # Copy from backup to main directory
+                                import shutil
+                                shutil.copy2(
+                                    os.path.join(backup_dir, file),
+                                    os.path.join(data_dir, file)
+                                )
+                                st.success(f"Restored {file}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error restoring file: {str(e)}")
+    
+    # Show upload instructions
+    with upload_tab:
+        st.markdown("""
+            ### Upload Instructions
+            Please ensure your Excel file follows these requirements:
+            
+            - File name format: '9:1:2023-6:19:2024.xlsx' (start_date-end_date)
+            - Required columns (case-sensitive):
+                - user_id
+                - class_label
+                - total_days
+                - present_days
+                - absent_days
+            - Optional columns:
+                - Welfare status
             - NYF status
             - OSIS ID Number
     """, unsafe_allow_html=True)
