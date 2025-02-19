@@ -1196,18 +1196,14 @@ def show_interventions():
                 "Other"
             ]
             
-            # Intervention type selection with default option
-            options = ["Select an intervention type..."] + intervention_type_options
+            # Simple intervention type selection
             selected_type = st.selectbox(
                 "Intervention Type",
-                options=options,
-                key="new_intervention_type"
+                intervention_type_options
             )
             
-            # Handle intervention type selection
-            final_intervention_type = None
-            if selected_type != "Select an intervention type...":
-                final_intervention_type = selected_type
+            # Set final intervention type
+            final_intervention_type = selected_type
                 
             # Handle "Other" option
             if selected_type == "Other":
