@@ -89,11 +89,15 @@ def main():
         /* Main navigation tabs */
         div[data-testid="stHorizontalBlock"]:has(div[data-baseweb="tab-list"]) {
             margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
         }
         div[data-baseweb="tab-list"]:first-of-type {
             gap: 1.5rem;
             border-bottom: 3px solid #e5e7eb;
             padding-bottom: 0;
+            display: flex;
+            justify-content: center;
         }
         div[data-baseweb="tab-list"]:first-of-type [data-baseweb="tab"] {
             height: 4rem;
@@ -118,10 +122,13 @@ def main():
         /* Secondary tabs */
         div[data-baseweb="tab-list"]:not(:first-of-type) {
             gap: 0.75rem;
-            margin: 0.5rem 0 2rem 0;
+            margin: 0.5rem auto 2rem auto;
             background-color: #f8fafc;
             padding: 0.75rem;
             border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            max-width: fit-content;
         }
         div[data-baseweb="tab-list"]:not(:first-of-type) [data-baseweb="tab"] {
             background-color: transparent;
@@ -1404,7 +1411,7 @@ def show_interventions():
                             st.write(f"Notes: {intervention.notes}")
                         
                         with edit_col:
-                            if st.button("✏️ Edit", key=f"edit_{intervention.id}"):
+                            if st.button("Edit", key=f"edit_{intervention.id}"):
                                 # Store intervention ID in session state for editing
                                 st.session_state["editing_intervention_id"] = intervention.id
                                 st.session_state["editing_intervention_type"] = intervention.intervention_type
@@ -1415,7 +1422,7 @@ def show_interventions():
                                 st.rerun()
                         
                         with delete_col:
-                            if st.button("🗑️ Delete", key=f"delete_{intervention.id}"):
+                            if st.button("Delete", key=f"delete_{intervention.id}"):
                                 try:
                                     # Delete the intervention
                                     session.query(Intervention).filter_by(id=intervention.id).delete()
