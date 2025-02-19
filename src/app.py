@@ -46,15 +46,15 @@ def main():
                 files = [f for f in os.listdir(data_dir) if f.endswith(('.xlsx', '.numbers'))]
                 if not files:
                     raise Exception(f"No Excel or Numbers files found in {data_dir}")
-                    st.write("Found files:", files)
-                    import_all_data(data_dir)
+                st.write("Found files:", files)
+                import_all_data(data_dir)
                 st.success("Data imported successfully!")
                 st.rerun()  # Changed from experimental_rerun() to rerun()
-            except Exception as e:
-                st.error(f"Error importing data: {str(e)}")
-                st.write("Current working directory:", os.getcwd())
-                st.write("Directory contents:", os.listdir())
-        return
+        except Exception as e:
+            st.error(f"Error importing data: {str(e)}")
+            st.write("Current working directory:", os.getcwd())
+            st.write("Directory contents:", os.listdir())
+            return
 
     # Custom CSS to improve layout
     st.markdown("""
