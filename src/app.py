@@ -250,17 +250,36 @@ def show_data_upload():
                 data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
                 os.makedirs(data_dir, exist_ok=True)
                 
-                # Save file
-                file_path = os.path.join(data_dir, uploaded_file.name)
+                # Create a backup directory
+                backup_dir = os.path.join(data_dir, 'backup')
+                os.makedirs(backup_dir, exist_ok=True)
+                
+                # Save file with timestamp to prevent overwrites
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                safe_filename = f"{timestamp}_{uploaded_file.name}"
+                file_path = os.path.join(data_dir, safe_filename)
+                
+                # Save main copy
                 with open(file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+                    file_content = uploaded_file.getbuffer()
+                    f.write(file_content)
+                
+                # Save backup copy
+                backup_path = os.path.join(backup_dir, safe_filename)
+                with open(backup_path, "wb") as f:
+                    f.write(file_content)
                 
                 # Import the data
                 from data_import import import_excel_data
                 import_excel_data(file_path)
                 
-                st.success(f"Successfully imported data from {uploaded_file.name}")
-                st.rerun()  # Use st.rerun() instead of st.experimental_rerun()
+                st.success(f"Successfully imported and backed up data from {uploaded_file.name}")
+                
+                # Show the user where their data is stored
+                st.info(f"Your data has been permanently stored in the database and backed up to: {backup_dir}")
+                
+                # Refresh the page to show new data
+                st.rerun()
         except Exception as e:
             st.error(f"Error importing data: {str(e)}")
             st.error("Please make sure your file follows the required format and column names.")
