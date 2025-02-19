@@ -119,6 +119,9 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
     if not records:
         return pd.DataFrame(columns=['period', 'attendance_rate'])
     
+    if not records:
+        return pd.DataFrame(columns=['period', 'attendance_rate'])
+
     # Convert records to DataFrame with proper datetime conversion
     df = pd.DataFrame([
         {
@@ -131,39 +134,31 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
     # Ensure date column is datetime
     df['date'] = pd.to_datetime(df['date'])
     
-    # Group by time interval
+    # Group by time interval and calculate average attendance rate
     if interval == 'daily':
         df['period'] = df['date']
     elif interval == 'weekly':
-        # Start weeks on Monday (0) and end on Sunday (6)
         df['period'] = df['date'] - pd.to_timedelta(df['date'].dt.dayofweek, unit='D')
     elif interval == 'monthly':
-        # Use first day of each month
         df['period'] = df['date'].dt.to_period('M').dt.to_timestamp()
-    elif interval == 'yearly':
-        # Use first day of each academic year (September 1st)
-        df['period'] = df.apply(lambda x: 
-            datetime(x['date'].year if x['date'].month >= 9 else x['date'].year - 1, 9, 1), 
+    else:  # yearly
+        df['period'] = df.apply(
+            lambda x: datetime(x['date'].year if x['date'].month >= 9 else x['date'].year - 1, 9, 1),
             axis=1
         )
     
     # Calculate average attendance rate for each period
-    result = df.groupby('period')['present_percentage'].agg(['mean', 'count']).reset_index()
-    result.columns = ['period', 'attendance_rate', 'record_count']
+    result = df.groupby('period').agg(
+        attendance_rate=('present_percentage', 'mean'),
+        student_count=('student_id', 'nunique'),
+        record_count=('present_percentage', 'count')
+    ).reset_index()
     
-    if interval == 'monthly':
-        # Create a complete date range for all months
-        date_range = pd.date_range(start=start_date, end=end_date, freq='MS')
-        all_periods = pd.DataFrame({'period': date_range})
-        
-        # Merge with actual data, filling in missing months
-        result = pd.merge(all_periods, result, on='period', how='left')
-        
-        # Forward fill missing values, then backward fill any remaining
-        result['attendance_rate'] = result['attendance_rate'].fillna(method='ffill').fillna(method='bfill')
-        
-        # If still have NaN (happens if all data is missing), fill with 100
-        result['attendance_rate'] = result['attendance_rate'].fillna(100.0)
+    # Only include periods that have actual data
+    result = result[result['record_count'] > 0]
+    
+    # Sort by period and select final columns
+    result = result[['period', 'attendance_rate']].sort_values('period')
     
     # Sort by period and select final columns
     result = result[['period', 'attendance_rate']].sort_values('period')

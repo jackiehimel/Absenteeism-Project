@@ -350,10 +350,10 @@ def show_dashboard():
                     interval=interval.lower()
                 )
                 
+                # Create attendance trend line plot
+                fig = go.Figure()
+                
                 if not trends.empty:
-                    # Create attendance trend line plot
-                    fig = go.Figure()
-                    
                     # Add the main line
                     fig.add_trace(go.Scatter(
                         x=trends['period'],
@@ -363,34 +363,43 @@ def show_dashboard():
                         line=dict(color='#2563eb', width=3),
                         marker=dict(size=8)
                     ))
-                    
-                    # Add reference lines
-                    fig.add_hline(y=90, line_dash="dash", line_color="#22c55e", 
-                                annotation_text="On Track (90%)", annotation_position="top right")
-                    fig.add_hline(y=85, line_dash="dash", line_color="#eab308", 
-                                annotation_text="Warning (85%)", annotation_position="top right")
-                    fig.add_hline(y=80, line_dash="dash", line_color="#ef4444", 
-                                annotation_text="At Risk (80%)", annotation_position="top right")
-                    
-                    # Update layout
-                    fig.update_layout(
-                        title={
-                            'text': f'Attendance Trends {"(All Grades)" if grade is None else f"(Grade {grade})"}',
-                            'y': 0.95,
-                            'x': 0.5,
-                            'xanchor': 'center',
-                            'yanchor': 'top'
-                        },
-                        margin=dict(l=20, r=20, t=40, b=20),
-                        yaxis_title='Attendance Rate (%)',
-                        xaxis_title='Date',
-                        showlegend=False,
-                        yaxis=dict(range=[75, 100]),
-                        plot_bgcolor='white',
-                        height=400
+                
+                # Add reference lines
+                fig.add_hline(y=90, line_dash="dash", line_color="#22c55e", 
+                            annotation_text="On Track (90%)", annotation_position="top right")
+                fig.add_hline(y=85, line_dash="dash", line_color="#eab308", 
+                            annotation_text="Warning (85%)", annotation_position="top right")
+                fig.add_hline(y=80, line_dash="dash", line_color="#ef4444", 
+                            annotation_text="At Risk (80%)", annotation_position="top right")
+                
+                # Update layout
+                fig.update_layout(
+                    title={
+                        'text': f'Attendance Trends {"(All Grades)" if grade is None else f"(Grade {grade})"}',
+                        'y': 0.95,
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'yanchor': 'top'
+                    },
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    yaxis_title='Attendance Rate (%)',
+                    xaxis_title='Date',
+                    showlegend=False,
+                    yaxis=dict(range=[75, 100]),
+                    plot_bgcolor='white',
+                    height=400
+                )
+                
+                if trends.empty:
+                    fig.add_annotation(
+                        text="No attendance data available for the selected period",
+                        xref="paper", yref="paper",
+                        x=0.5, y=0.5,
+                        showarrow=False,
+                        font=dict(size=14)
                     )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
+                
+                st.plotly_chart(fig, use_container_width=True)
                     
                     # Show attendance tiers
                     tiers = get_tiered_attendance(grade=grade)
