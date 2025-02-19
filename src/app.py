@@ -38,17 +38,14 @@ def main():
     #     st.write("Files in data directory:", os.listdir(data_dir))
     
     if student_count == 0:
-        st.warning("No student data found in the database")
-        if st.button("Import Data"):
-            try:
-                from data_import import import_all_data
-                with st.spinner("Importing data..."):
-                    st.write(f"Attempting to import data from: {data_dir}")
-                    if not os.path.exists(data_dir):
-                        raise Exception(f"Data directory not found: {data_dir}")
-                    files = [f for f in os.listdir(data_dir) if f.endswith(('.xlsx', '.numbers'))]
-                    if not files:
-                        raise Exception(f"No Excel or Numbers files found in {data_dir}")
+        try:
+            from data_import import import_all_data
+            with st.spinner("Initializing database and importing data..."):
+                if not os.path.exists(data_dir):
+                    raise Exception(f"Data directory not found: {data_dir}")
+                files = [f for f in os.listdir(data_dir) if f.endswith(('.xlsx', '.numbers'))]
+                if not files:
+                    raise Exception(f"No Excel or Numbers files found in {data_dir}")
                     st.write("Found files:", files)
                     import_all_data(data_dir)
                 st.success("Data imported successfully!")
