@@ -90,15 +90,14 @@ def main():
         div[data-testid="stHorizontalBlock"]:has(div[data-baseweb="tab-list"]) {
             margin-bottom: 2rem;
             display: flex;
-            justify-content: flex-start;
+            justify-content: center;
         }
         div[data-baseweb="tab-list"]:first-of-type {
             gap: 1.5rem;
             border-bottom: 3px solid #e5e7eb;
             padding-bottom: 0;
             display: flex;
-            justify-content: flex-start;
-            padding-left: 1rem;
+            justify-content: center;
         }
         div[data-baseweb="tab-list"]:first-of-type [data-baseweb="tab"] {
             height: 4rem;
@@ -309,33 +308,6 @@ def main():
 
 def show_data_upload():
     st.header("Data Management")
-    
-    # Add custom CSS for data management tabs
-    st.markdown("""
-        <style>
-        /* Data Management Tabs */
-        [data-testid="stVerticalBlock"]:has(div.data-upload-section) div[data-baseweb="tab-list"] {
-            background-color: #f3f4f6;
-            border-radius: 0.5rem;
-            padding: 0.5rem;
-            gap: 0.5rem;
-        }
-        [data-testid="stVerticalBlock"]:has(div.data-upload-section) [data-baseweb="tab"] {
-            background-color: white;
-            border-radius: 0.25rem;
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            color: #4b5563;
-        }
-        [data-testid="stVerticalBlock"]:has(div.data-upload-section) [data-baseweb="tab"][aria-selected="true"] {
-            background-color: #e5e7eb;
-            font-weight: 500;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # Add a div for targeting the custom CSS
-    st.markdown('<div class="data-upload-section"></div>', unsafe_allow_html=True)
     
     # Create tabs for upload and management
     upload_tab, manage_tab = st.tabs(["Upload New Data", "Manage Existing Data"])
