@@ -451,64 +451,39 @@ def show_dashboard():
                                 <p style='margin: 0; color: #166534;'>{on_track_count/total_students*100:.1f}%</p>
                             </div>
                         """, unsafe_allow_html=True)
+                # Add extra spacing after tiers
+                st.markdown("<br><br>", unsafe_allow_html=True)
+                
                 # Show absence patterns
                 patterns = analyze_absence_patterns(grade=grade)
                 if patterns:
                     st.subheader("Absence Patterns")
-                    col1, col2 = st.columns(2)
                     
-                    with col1:
-                        # Day of week pattern
-                        fig = go.Figure(data=[
-                            go.Bar(
-                                x=patterns['day_of_week'].index,
-                                y=patterns['day_of_week'].values,
-                                marker_color='#2563eb'
-                            )
-                        ])
-                        
-                        fig.update_layout(
-                            title="Absences by Day of Week",
-                            xaxis_title="Day of Week",
-                            yaxis_title="Absence Rate (%)",
-                            showlegend=False,
-                            margin=dict(l=40, r=20, t=40, b=40),
-                            height=300,
-                            plot_bgcolor='white',
-                            yaxis=dict(gridcolor='#e5e7eb')
+                    # Day of week pattern
+                    fig = go.Figure(data=[
+                        go.Bar(
+                            x=patterns['day_of_week'].index,
+                            y=patterns['day_of_week'].values,
+                            marker_color='#2563eb',
+                            hovertemplate='Day: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
                         )
-                        
-                        st.plotly_chart(fig, use_container_width=True)
+                    ])
                     
-                    with col2:
-                        # Monthly pattern - only showing actual data
-                        fig = go.Figure(data=[
-                            go.Bar(
-                                x=patterns['month'].index,
-                                y=patterns['month'].values,
-                                marker_color='#2563eb',
-                                hovertemplate='Month: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
-                            )
-                        ])
-                        
-                        fig.update_layout(
-                            title="Absences by Month (September Only)",
-                            xaxis_title="Month",
-                            yaxis_title="Absence Rate (%)",
-                            showlegend=False,
-                            margin=dict(l=40, r=20, t=40, b=80),
-                            height=300,
-                            plot_bgcolor='white',
-                            yaxis=dict(
-                                gridcolor='#e5e7eb',
-                                range=[0, max(patterns['month'].values) * 1.1]  # Add 10% padding
-                            ),
-                            xaxis=dict(
-                                tickangle=45
-                            )
+                    fig.update_layout(
+                        title="Absences by Day of Week",
+                        xaxis_title="Day of Week",
+                        yaxis_title="Absence Rate (%)",
+                        showlegend=False,
+                        margin=dict(l=40, r=20, t=40, b=40),
+                        height=300,
+                        plot_bgcolor='white',
+                        yaxis=dict(
+                            gridcolor='#e5e7eb',
+                            range=[0, max(patterns['day_of_week'].values) * 1.1]  # Add 10% padding
                         )
-                        
-                        st.plotly_chart(fig, use_container_width=True)
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.warning("No attendance data available for the selected time period.")
             except Exception as e:
