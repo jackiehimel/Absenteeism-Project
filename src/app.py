@@ -1378,7 +1378,23 @@ def show_interventions():
                 key="new_intervention_notes",
                 help="Add any relevant details about the intervention"
             )
-                        end_date=end_date,  # This will be None for ongoing interventions
+            
+            # Submit button
+            submitted = st.form_submit_button("Add Intervention", key="add_intervention_submit")
+            
+            if submitted:
+                try:
+                    # Validate that if "Other" is selected, a custom type was provided
+                    if selected_type == "Other" and not other_type:
+                        st.error("Please specify the intervention type for 'Other'")
+                        return
+                    
+                    # Add intervention to database
+                    new_intervention = Intervention(
+                        student_id=student.id,
+                        intervention_type=final_intervention_type,
+                        start_date=start_date,
+                        end_date=end_date if not is_ongoing else None,
                         is_ongoing=is_ongoing,
                         notes=notes if notes else None
                     )
@@ -1387,7 +1403,6 @@ def show_interventions():
                     session.commit()
                     st.success("Intervention added successfully!")
                     st.rerun()  # Refresh to show the new intervention
-                    
                 except Exception as e:
                     st.error(f"Error adding intervention: {str(e)}")
                     session.rollback()
