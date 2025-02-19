@@ -481,29 +481,30 @@ def show_dashboard():
                         st.plotly_chart(fig, use_container_width=True)
                     
                     with col2:
-                        # Monthly pattern
+                        # Monthly pattern - only showing actual data
                         fig = go.Figure(data=[
                             go.Bar(
                                 x=patterns['month'].index,
                                 y=patterns['month'].values,
-                                marker_color='#2563eb'
+                                marker_color='#2563eb',
+                                hovertemplate='Month: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
                             )
                         ])
                         
                         fig.update_layout(
-                            title="Absences by Month",
+                            title="Absences by Month (September Only)",
                             xaxis_title="Month",
                             yaxis_title="Absence Rate (%)",
                             showlegend=False,
-                            margin=dict(l=40, r=20, t=40, b=80),  # Increased bottom margin
+                            margin=dict(l=40, r=20, t=40, b=80),
                             height=300,
                             plot_bgcolor='white',
-                            yaxis=dict(gridcolor='#e5e7eb'),
+                            yaxis=dict(
+                                gridcolor='#e5e7eb',
+                                range=[0, max(patterns['month'].values) * 1.1]  # Add 10% padding
+                            ),
                             xaxis=dict(
-                                tickangle=45,  # Angle the month labels
-                                tickmode='array',
-                                ticktext=patterns['month'].index,
-                                tickvals=list(range(len(patterns['month'].index)))
+                                tickangle=45
                             )
                         )
                         

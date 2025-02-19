@@ -182,39 +182,19 @@ def analyze_absence_patterns(grade=None):
     df = pd.DataFrame([
         {
             'date': pd.to_datetime(record.date),
-            'school_year': record.date.year,
+            'month': pd.to_datetime(record.date).strftime('%B'),  # Full month name
             'present_percentage': record.present_percentage,
             'absent_percentage': record.absent_percentage
         } for record in records
     ])
     
-    # Ensure date column is datetime
-    df['date'] = pd.to_datetime(df['date'])
+    # Calculate actual monthly patterns
+    month_patterns = df.groupby('month')['absent_percentage'].mean()
     
-    # Create a custom month order
-    month_order = ['September', 'October', 'November', 'December',
-                  'January', 'February', 'March', 'April', 'May', 'June']
+    # Calculate actual day patterns (since we only have September data,
+    # we'll use a uniform distribution)
     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    
-    # Calculate day of week patterns (assume uniform distribution across days)
     day_patterns = pd.Series([20, 20, 20, 20, 20], index=day_order)
-    
-    # Calculate month patterns (distribute absences across academic year months)
-    # Weights for each month (based on typical number of school days)
-    month_weights = {
-        'September': 20, 'October': 21, 'November': 18, 'December': 15,
-        'January': 20, 'February': 18, 'March': 21, 'April': 15,
-        'May': 22, 'June': 14
-    }
-    
-    # Convert weights to percentages
-    total_days = sum(month_weights.values())
-    month_weights = {k: v/total_days for k, v in month_weights.items()}
-    
-    # Calculate weighted absences for each month
-    month_patterns = pd.Series(month_weights)
-    month_patterns = month_patterns * df['absent_percentage'].mean()
-    month_patterns = month_patterns.reindex(month_order)
     
     patterns = {
         'day_of_week': day_patterns,
