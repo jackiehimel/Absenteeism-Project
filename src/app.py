@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import os
 from data_import import import_excel_data
-from database import Student, AttendanceRecord, get_session
+from database import Student, AttendanceRecord, Intervention, get_session
 from analysis import get_attendance_trends, get_tiered_attendance, calculate_attendance_rate, analyze_absence_patterns
 
 def main():
@@ -544,7 +544,7 @@ def show_student_details():
         with col1:
             # Display student information
             st.markdown(f"""
-                <div class='student-info'><strong>Name:</strong> {student.name}</div>
+                <div class='student-info'><strong>Name:</strong> {student.first_name} {student.last_name}</div>
                 <div class='student-info'><strong>Grade:</strong> {student.grade}</div>
                 <div class='student-info'><strong>Gender:</strong> {student.gender or 'None'}</div>
                 <div class='student-info'><strong>Race:</strong> {student.race or 'None'}</div>
