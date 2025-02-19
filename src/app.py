@@ -316,28 +316,22 @@ def show_dashboard():
     
     col1, col2, col3 = st.columns([2, 2, 1])
     with col1:
-        # Always use earliest date from records
-        st.date_input(
+        start_date = st.date_input(
             "Start Date",
-            earliest_date,
+            earliest_date,  # Default to earliest date
             min_value=earliest_date,
             max_value=latest_date,
-            key="start_date",
-            disabled=True
+            key="start_date"
         )
-        start_date = earliest_date
     
     with col2:
-        # Always use latest date from records
-        st.date_input(
+        end_date = st.date_input(
             "End Date",
-            latest_date,
+            latest_date,  # Default to latest date
             min_value=earliest_date,
             max_value=latest_date,
-            key="end_date",
-            disabled=True
+            key="end_date"
         )
-        end_date = latest_date
     
     with col3:
         interval = st.selectbox(
