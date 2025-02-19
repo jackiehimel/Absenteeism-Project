@@ -306,6 +306,19 @@ def show_dashboard():
     if earliest_record and latest_record:
         earliest_date = earliest_record[0]
         latest_date = latest_record[0]
+        
+        # Adjust the date range to show the full academic year
+        if earliest_date.month >= 9:  # If we start in or after September
+            start_year = earliest_date.year
+        else:
+            start_year = earliest_date.year - 1
+        earliest_date = earliest_date.replace(year=start_year, month=9, day=1)
+        
+        if latest_date.month >= 9:  # If we end in or after September
+            end_year = latest_date.year + 1
+        else:
+            end_year = latest_date.year
+        latest_date = latest_date.replace(year=end_year, month=6, day=19)
     else:
         # Fallback dates only if database is completely empty
         earliest_date = datetime.now().date().replace(month=9, day=1)  # Default to Sept 1st of current year
@@ -842,6 +855,37 @@ def show_chronic_absenteeism():
 def show_demographics():
     st.header("Demographics Analysis")
     
+    # Show tiers at the top
+    st.subheader("Attendance Tiers")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown(
+            """<div class='info-card' style='background-color: #fef2f2; padding: 1rem;'>
+            <h3 style='color: #dc2626;'>Tier 3 - Chronic</h3>
+            <p>Below 80% Attendance</p>
+            </div>""", 
+            unsafe_allow_html=True
+        )
+    
+    with col2:
+        st.markdown(
+            """<div class='info-card' style='background-color: #fef3c7; padding: 1rem;'>
+            <h3 style='color: #d97706;'>Tier 2 - At Risk</h3>
+            <p>80-84.99% Attendance</p>
+            </div>""",
+            unsafe_allow_html=True
+        )
+    
+    with col3:
+        st.markdown(
+            """<div class='info-card' style='background-color: #ecfdf5; padding: 1rem;'>
+            <h3 style='color: #059669;'>Tier 1 - On Track</h3>
+            <p>85%+ Attendance</p>
+            </div>""",
+            unsafe_allow_html=True
+        )
+    
     # Get available grades from the database with actual student data
     session = get_session()
     available_grades = [
@@ -938,32 +982,29 @@ def show_demographics():
     grade_data = df[df['grade'].notna()]
     if not grade_data.empty and len(grade_data['grade'].unique()) > 1:
         st.markdown("<div class='info-card'>", unsafe_allow_html=True)
-        grade_stats = grade_data.groupby('grade')['attendance_rate'].agg(['mean', 'count']).reset_index()
-        grade_stats.columns = ['Grade', 'Average Attendance Rate', 'Count']
+        
+        # Count students below 85% attendance by grade
+        at_risk_by_grade = grade_data[grade_data['attendance_rate'] < 85.0]
+        grade_stats = at_risk_by_grade.groupby('grade').size().reset_index()
+        grade_stats.columns = ['Grade', 'Count']
+        
+        # Add percentage
+        total_by_grade = grade_data.groupby('grade').size().reset_index()
+        total_by_grade.columns = ['Grade', 'Total']
+        grade_stats = grade_stats.merge(total_by_grade, on='Grade')
+        grade_stats['Percentage'] = (grade_stats['Count'] / grade_stats['Total'] * 100).round(1)
+        
+        # Create text labels
+        text_labels = [f"{count} ({pct}%)" for count, pct in zip(grade_stats["Count"], grade_stats["Percentage"])]
         
         fig = px.bar(
             grade_stats,
             x='Grade',
-            y='Average Attendance Rate',
-            text='Average Attendance Rate',  # Add this line to show the values
-            title='Average Attendance Rate by Grade',
+            y='Count',
+            text=text_labels,
+            title='At-Risk Students by Grade (Attendance Below 85%)',
             labels={'Count': 'Number of Students'},
-            color_discrete_sequence=['#2563eb']
-        )
-        
-        # Update traces to show percentage with one decimal place
-        fig.update_traces(
-            texttemplate='%{text:.1f}%',  # Format as percentage with 1 decimal
-            textposition='outside'  # Show text above bars
-        )
-        fig = px.bar(
-            grade_stats,
-            x='Grade',
-            y='Average Attendance Rate',
-            text='Count',
-            title='Average Attendance Rate by Grade',
-            labels={'Count': 'Number of Students'},
-            color_discrete_sequence=['#2563eb']
+            color_discrete_sequence=['#dc2626']
         )
         
         fig.update_layout(

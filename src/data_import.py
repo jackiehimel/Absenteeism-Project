@@ -1,17 +1,19 @@
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from database import Student, AttendanceRecord, get_session
 import os
 import re
 
 def parse_filename_date(filename):
-    """Extract date range from filename format '9:1:2023-6:19:2024' or '9:1:2024 6:19:2025'."""
-    # Try the standard format first
+    """Extract date range from filename format '9:1:2023-6:19:2024' or '9:1:2024 6:19:2025' or '9_1_2024 6_19_2025'."""
+    # Try the standard format with colons
     pattern1 = r'(\d+):(\d+):(\d+)-(\d+):(\d+):(\d+)'
     # Try the alternative format with space
     pattern2 = r'(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)'
+    # Try the format with underscores
+    pattern3 = r'(\d+)_(\d+)_(\d+)\s*[-\s]\s*(\d+)_(\d+)_(\d+)'
     
-    for pattern in [pattern1, pattern2]:
+    for pattern in [pattern1, pattern2, pattern3]:
         match = re.search(pattern, filename)
         if match:
             start_month, start_day, start_year, end_month, end_day, end_year = map(int, match.groups())
@@ -30,6 +32,7 @@ def parse_filename_date(filename):
             datetime(end_year, 6, 19).date()    # Assume June 19th end
         )
     
+    print(f"Could not parse date from filename: {filename}")
     return None, None
 
 def get_welfare_code(status):
@@ -144,9 +147,10 @@ def import_excel_data(file_path):
                         else:
                             absent_pct = (absent_days / total_days * 100) if total_days > 0 else 0
                         
+                        # Create a single record for the period
                         attendance = AttendanceRecord(
                             student=student,
-                            date=start_date,  # Using period start date
+                            date=start_date,  # Use period start date
                             total_days=total_days,
                             present_days=present_days,
                             absent_days=absent_days,

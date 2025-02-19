@@ -115,8 +115,9 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
     # Convert records to DataFrame with proper datetime conversion
     df = pd.DataFrame([
         {
-            'date': pd.to_datetime(record.date),
-            'present_percentage': record.present_percentage
+            'date': record.date,
+            'present_percentage': record.present_percentage,
+            'student_id': record.student_id
         } for record in records
     ])
     
@@ -127,43 +128,30 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
     if interval == 'daily':
         df['period'] = df['date']
     elif interval == 'weekly':
+        # Start weeks on Monday (0) and end on Sunday (6)
         df['period'] = df['date'] - pd.to_timedelta(df['date'].dt.dayofweek, unit='D')
     elif interval == 'monthly':
+        # Use first day of each month
         df['period'] = df['date'].dt.to_period('M').dt.to_timestamp()
     elif interval == 'yearly':
-        df['period'] = df['date'].dt.to_period('Y').dt.to_timestamp()
+        # Use first day of each academic year (September 1st)
+        df['period'] = df.apply(lambda x: 
+            datetime(x['date'].year if x['date'].month >= 9 else x['date'].year - 1, 9, 1), 
+            axis=1
+        )
     
     # Calculate average attendance rate for each period
-    result = df.groupby('period')['present_percentage'].mean().reset_index()
-    result.columns = ['period', 'attendance_rate']
-    result = result.sort_values('period')
+    result = df.groupby('period')['present_percentage'].agg(['mean', 'count']).reset_index()
+    result.columns = ['period', 'attendance_rate', 'record_count']
+    
+    # Only include periods with sufficient data points
+    min_records = 1 if interval == 'yearly' else 2 if interval == 'monthly' else 3
+    result = result[result['record_count'] >= min_records]
+    
+    # Sort by period and select final columns
+    result = result[['period', 'attendance_rate']].sort_values('period')
     
     return result
-    
-    # Convert to pandas DataFrame
-    df = pd.DataFrame([
-        {
-            'date': record.date,
-            'present_percentage': record.present_percentage,
-            'student_id': record.student_id
-        } for record in records
-    ])
-    
-    # Group by time interval
-    if interval == 'weekly':
-        df['period'] = df['date'].dt.to_period('W')
-    elif interval == 'monthly':
-        df['period'] = df['date'].dt.to_period('M')
-    elif interval == 'yearly':
-        df['period'] = df['date'].dt.to_period('Y')
-    else:  # daily
-        df['period'] = df['date']
-    
-    # Calculate average attendance rate for each period
-    grouped = df.groupby('period')['present_percentage'].mean().reset_index()
-    grouped.columns = ['period', 'attendance_rate']
-    
-    return grouped
 
 def analyze_absence_patterns(grade=None):
     """Analyze patterns in absences (e.g., specific days of week, months)"""
