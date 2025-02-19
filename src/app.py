@@ -1213,30 +1213,27 @@ def show_interventions():
             start_date = st.date_input("Start Date", datetime.now(), key="intervention_start_date")
             
             # Status selection
-            col1, col2 = st.columns([1, 2])  # Make the radio buttons take less space
-            with col1:
-                intervention_status = st.radio(
-                    "Intervention Status",
-                    options=["Ongoing", "Completed"],
-                    key="intervention_status",
-                    horizontal=True
-                )
+            status = st.radio(
+                "Status",
+                options=["Ongoing", "Completed"],
+                key="status",
+                horizontal=True,
+                index=0  # Default to Ongoing
+            )
             
-            # End date field appears when Completed is selected
+            # End date field appears ONLY when Completed is selected
             end_date = None
-            if intervention_status == "Completed":
-                with col2:
-                    end_date = st.date_input(
-                        "End Date",
-                        value=start_date,  # Default to start date
-                        min_value=start_date,  # Cannot be before start date
-                        max_value=datetime.now().date(),  # Cannot be in the future
-                        help="Must be after the start date and not in the future",
-                        key="intervention_end_date"
-                    )
+            is_ongoing = True
             
-            # Set is_ongoing based on status
-            is_ongoing = (intervention_status == "Ongoing")
+            if status == "Completed":
+                end_date = st.date_input(
+                    "End Date",
+                    value=start_date,
+                    min_value=start_date,
+                    max_value=datetime.now().date(),
+                    key="end_date"
+                )
+                is_ongoing = False
             
             # Notes field
             notes = st.text_area("Notes", key="notes")
@@ -1250,7 +1247,7 @@ def show_interventions():
                         return
                         
                     # Validate dates
-                    if intervention_status == "Completed" and end_date and end_date < start_date:
+                    if status == "Completed" and end_date and end_date < start_date:
                         st.error("End date must be after start date")
                         return
                         
@@ -1260,7 +1257,7 @@ def show_interventions():
                         intervention_type=final_intervention_type,
                         start_date=start_date,
                         end_date=end_date,  # This will be None for ongoing interventions
-                        is_ongoing=(intervention_status == "Ongoing"),
+                        is_ongoing=is_ongoing,
                         notes=notes if notes else None
                     )
                     
