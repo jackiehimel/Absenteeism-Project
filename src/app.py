@@ -158,23 +158,47 @@ def main():
         
         /* Intervention Details */
         .streamlit-expanderHeader {
-            font-size: 1.1rem !important;
-            font-weight: 500 !important;
             font-family: "Source Sans Pro", sans-serif !important;
+            font-size: 1rem !important;
+            font-weight: 500 !important;
+            color: #1f2937 !important;
+            padding: 0.75rem 1rem !important;
         }
+        
         .streamlit-expanderContent {
-            font-family: "Source Sans Pro", sans-serif;
-            font-size: 1rem;
+            font-family: "Source Sans Pro", sans-serif !important;
+            padding: 1rem !important;
         }
+        
         .streamlit-expanderContent p {
-            margin: 0.5rem 0;
-            color: #374151;
+            font-family: "Source Sans Pro", sans-serif !important;
+            font-size: 1rem !important;
+            margin: 0.5rem 0 !important;
+            color: #1f2937 !important;
+            line-height: 1.5 !important;
         }
+        
+        .streamlit-expanderContent strong {
+            font-weight: 500 !important;
+            color: #4b5563 !important;
+        }
+        
+        /* Buttons */
         .stButton button {
-            font-family: "Source Sans Pro", sans-serif;
-            font-size: 0.9rem;
-            font-weight: 500;
-            padding: 0.375rem 1rem;
+            font-family: "Source Sans Pro", sans-serif !important;
+            font-size: 0.9rem !important;
+            font-weight: 500 !important;
+            padding: 0.375rem 1rem !important;
+            border-radius: 0.375rem !important;
+            border: 1px solid #e5e7eb !important;
+            background-color: white !important;
+            color: #1f2937 !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        
+        .stButton button:hover {
+            background-color: #f9fafb !important;
+            border-color: #d1d5db !important;
         }
         
         /* Cards and Containers */
@@ -1390,16 +1414,19 @@ def show_interventions():
             attendance_rate = calculate_attendance_rate(student.id)
             if attendance_rate < 80:
                 status_color = '#fef2f2'
-                text_color = '#dc2626'
+                status_text_color = '#dc2626'
                 status_text = 'Chronic Absenteeism'
             elif attendance_rate < 85:
                 status_color = '#fef3c7'
-                text_color = '#d97706'
+                status_text_color = '#d97706'
                 status_text = 'At Risk'
             else:
                 status_color = '#ecfdf5'
-                text_color = '#059669'
+                status_text_color = '#059669'
                 status_text = 'On Track'
+            
+            # Use a neutral dark color for text
+            text_color = '#1f2937'
             
             # Display student info in a styled card
             st.markdown(
@@ -1408,7 +1435,7 @@ def show_interventions():
                         <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Student:</span> {student.first_name} {student.last_name}</div>
                         <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Grade:</span> {student.grade}</div>
                         <div style='color: {text_color}; font-size: 1.1rem;'><span style='font-weight: 500;'>Attendance:</span> {attendance_rate:.1f}%</div>
-                        <div style='color: {text_color}; font-size: 1.1rem; font-weight: 500;'>{status_text}</div>
+                        <div style='color: {status_text_color}; font-size: 1.1rem; font-weight: 500;'>{status_text}</div>
                     </div>
                 </div>""",
                 unsafe_allow_html=True
@@ -1420,16 +1447,19 @@ def show_interventions():
             
             if interventions:
                 for intervention in interventions:
-                    with st.expander(f"{intervention.intervention_type} - {'Ongoing' if intervention.is_ongoing else 'Completed'}"):
+                    # Custom header style for the expander
+                    header = f"{intervention.intervention_type} - {'Ongoing' if intervention.is_ongoing else 'Completed'}"
+                    with st.expander(header):
                         # Create three columns for the intervention details
                         details_col, edit_col, delete_col = st.columns([3, 1, 1])
                         
                         with details_col:
                             # Show current details
-                            st.write(f"Start Date: {intervention.start_date}")
-                            if not intervention.is_ongoing and intervention.end_date:
-                                st.write(f"End Date: {intervention.end_date}")
-                            st.write(f"Notes: {intervention.notes}")
+                            st.markdown(f"<div style='font-family: "Source Sans Pro", sans-serif; font-size: 1rem;'>
+                                <p style='margin: 0.5rem 0; color: #1f2937;'><strong>Start Date:</strong> {intervention.start_date}</p>
+                                {f'<p style="margin: 0.5rem 0; color: #1f2937;"><strong>End Date:</strong> {intervention.end_date}</p>' if not intervention.is_ongoing and intervention.end_date else ''}
+                                <p style='margin: 0.5rem 0; color: #1f2937;'><strong>Notes:</strong> {intervention.notes}</p>
+                            </div>", unsafe_allow_html=True)
                         
                         with edit_col:
                             if st.button("Edit", key=f"edit_{intervention.id}"):
