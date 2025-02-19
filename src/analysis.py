@@ -209,7 +209,7 @@ def analyze_absence_patterns(grade=None):
     
     # Convert weights to percentages
     total_days = sum(month_weights.values())
-    month_weights = {k: v/total_days for k, v in month_weights.values()}
+    month_weights = {k: v/total_days for k, v in month_weights.items()}
     
     # Calculate weighted absences for each month
     month_patterns = pd.Series(month_weights)
