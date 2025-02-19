@@ -191,9 +191,22 @@ def analyze_absence_patterns(grade=None):
     df['date'] = pd.to_datetime(df['date'])
     
     # Calculate patterns
+    # Create a custom month order
+    month_order = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December']
+    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    
+    # Calculate day of week patterns
+    day_patterns = df.groupby(df['date'].dt.day_name())['absent_percentage'].mean()
+    day_patterns = day_patterns.reindex(day_order)
+    
+    # Calculate month patterns
+    month_patterns = df.groupby(df['date'].dt.month_name())['absent_percentage'].mean()
+    month_patterns = month_patterns.reindex(month_order)
+    
     patterns = {
-        'day_of_week': df.groupby(df['date'].dt.day_name())['absent_percentage'].mean().sort_index(),
-        'month': df.groupby(df['date'].dt.month_name())['absent_percentage'].mean().sort_index(),
+        'day_of_week': day_patterns,
+        'month': month_patterns
     }
     
     return patterns

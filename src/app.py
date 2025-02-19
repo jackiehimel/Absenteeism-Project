@@ -495,10 +495,16 @@ def show_dashboard():
                             xaxis_title="Month",
                             yaxis_title="Absence Rate (%)",
                             showlegend=False,
-                            margin=dict(l=40, r=20, t=40, b=40),
+                            margin=dict(l=40, r=20, t=40, b=80),  # Increased bottom margin
                             height=300,
                             plot_bgcolor='white',
-                            yaxis=dict(gridcolor='#e5e7eb')
+                            yaxis=dict(gridcolor='#e5e7eb'),
+                            xaxis=dict(
+                                tickangle=45,  # Angle the month labels
+                                tickmode='array',
+                                ticktext=patterns['month'].index,
+                                tickvals=list(range(len(patterns['month'].index)))
+                            )
                         )
                         
                         st.plotly_chart(fig, use_container_width=True)
