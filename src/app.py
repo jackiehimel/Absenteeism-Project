@@ -1198,26 +1198,25 @@ def show_interventions():
             
             # Intervention type selection
             selected_type = st.selectbox(
-                "Intervention Type",
-                options=["Select an intervention..."] + intervention_type_options,
+                label="Intervention Type",
+                options=intervention_type_options,
                 key="new_intervention_type",
-                index=0
+                index=None,
+                label_visibility="visible",
+                placeholder="Select an intervention type..."
             )
             
             # Initialize final_intervention_type
-            final_intervention_type = None
+            final_intervention_type = selected_type
             
-            # Only proceed with the actual intervention type if one is selected
-            if selected_type != "Select an intervention...":
-                final_intervention_type = selected_type
-                # Show text input for "Other" option
-                if selected_type == "Other":
-                    other_type = st.text_input(
-                        "Please specify the intervention type", 
-                        key="new_intervention_other_type"
-                    )
-                    if other_type:
-                        final_intervention_type = other_type
+            # Handle "Other" option
+            if selected_type == "Other":
+                other_type = st.text_input(
+                    "Please specify the intervention type", 
+                    key="new_intervention_other_type"
+                )
+                if other_type:
+                    final_intervention_type = other_type
                     
             # Start date
             start_date = st.date_input(
