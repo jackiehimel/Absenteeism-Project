@@ -653,11 +653,34 @@ def show_student_details():
         
         with col1:
             # Display student information
+            # Add CSS for consistent styling
+            st.markdown("""
+                <style>
+                .info-text {
+                    font-family: 'Arial', sans-serif;
+                    font-size: 16px;
+                    margin: 5px 0;
+                    padding: 5px;
+                }
+                .status-text {
+                    font-family: 'Arial', sans-serif;
+                    font-size: 16px;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    display: inline-block;
+                    margin-top: 10px;
+                }
+                .status-good { background-color: #dcfce7; color: #166534; }
+                .status-warning { background-color: #fef9c3; color: #854d0e; }
+                .status-danger { background-color: #fee2e2; color: #991b1b; }
+                </style>
+            """, unsafe_allow_html=True)
+            
             st.markdown(f"""
-                <div class='student-info'><strong>Name:</strong> {student.first_name} {student.last_name}</div>
-                <div class='student-info'><strong>Grade:</strong> {student.grade}</div>
-                <div class='student-info'><strong>Gender:</strong> {student.gender or 'None'}</div>
-                <div class='student-info'><strong>Race:</strong> {student.race or 'None'}</div>
+                <div class='info-text'><strong>Name:</strong> {student.first_name} {student.last_name}</div>
+                <div class='info-text'><strong>Grade:</strong> {student.grade}</div>
+                <div class='info-text'><strong>Gender:</strong> {student.gender or 'None'}</div>
+                <div class='info-text'><strong>Race:</strong> {student.race or 'None'}</div>
             """, unsafe_allow_html=True)
         
         # Get the most recent attendance record
@@ -670,18 +693,18 @@ def show_student_details():
             if latest_record:
                 attendance_rate = latest_record.present_percentage
                 st.markdown(f"""
-                    <div class='student-info'>
+                    <div class='info-text'>
                         <strong>Attendance:</strong> {attendance_rate:.1f}%
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Show attendance status using new status card classes
+                # Show attendance status using consistent styling
                 if attendance_rate >= 90:
-                    st.markdown("<div class='status-card status-good'>Good Attendance</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='status-text status-good'>Good Attendance</div>", unsafe_allow_html=True)
                 elif attendance_rate >= 80:
-                    st.markdown("<div class='status-card status-warning'>At Risk</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='status-text status-warning'>At Risk</div>", unsafe_allow_html=True)
                 else:
-                    st.markdown("<div class='status-card status-danger'>Chronic Absence</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='status-text status-danger'>Chronic Absence</div>", unsafe_allow_html=True)
             else:
                 st.info("No attendance data available")
 
@@ -1210,10 +1233,12 @@ def show_interventions():
     students = session.query(Student).all()
     student_names = [f"{s.first_name} {s.last_name}" for s in students]
     
-    # Student selection
-    selected_student = st.selectbox("Select Student", student_names)
+    # Student selection with ID and name
+    student_options = [f"{s.id} - {s.first_name} {s.last_name}" for s in students]
+    selected_student = st.selectbox("Select Student", student_options)
     if selected_student:
-        student = students[student_names.index(selected_student)]
+        student_id = int(selected_student.split(' - ')[0])
+        student = session.query(Student).get(student_id)
         
         # Show student info
         st.subheader("Student Information")
@@ -1260,6 +1285,9 @@ def show_interventions():
         # Add new intervention
         st.subheader("Add New Intervention")
         with st.form(key="new_intervention_form"):
+            # Show student ID (read-only)
+            st.text_input("Student ID", value=str(student.id), disabled=True)
+            
             # Intervention type selection
             intervention_type_options = [
                 "Point Person",
@@ -1313,23 +1341,29 @@ def show_interventions():
                 key="new_intervention_start_date"
             )
             
-            # Optional end date (always visible)
-            end_date = st.date_input(
-                "End Date (Optional)",
-                value=datetime.now(),
-                min_value=start_date,
-                help="Leave empty if intervention is ongoing",
-                key="new_intervention_end_date"
+            # Ongoing status checkbox
+            is_ongoing = st.checkbox(
+                "This is an ongoing intervention",
+                value=True,
+                help="Check this box if the intervention is still in progress"
             )
+            
+            # End date (only shown if not ongoing)
+            end_date = None
+            if not is_ongoing:
+                end_date = st.date_input(
+                    "End Date",
+                    value=datetime.now(),
+                    min_value=start_date,
+                    key="new_intervention_end_date"
+                )
             
             # Notes field
             notes = st.text_area(
                 "Notes", 
-                key="new_intervention_notes"
+                key="new_intervention_notes",
+                help="Add any relevant details about the intervention"
             )
-            
-            # Set ongoing status based on whether end date is provided
-            is_ongoing = end_date is None
             
             # Submit button
             submitted = st.form_submit_button("Add Intervention")
