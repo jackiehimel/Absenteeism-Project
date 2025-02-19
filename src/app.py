@@ -1447,18 +1447,13 @@ def show_interventions():
             
             # Display student info in a styled card
             st.markdown(
-                f"""<div style='padding: 1.5rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem; font-family: "Source Sans Pro", sans-serif;'>
-                    <div style='display: grid; grid-template-columns: auto 1fr; gap: 1rem 2rem;'>
-                        <div style='color: #4b5563; font-size: 1rem;'>Student:</div>
-                        <div style='color: #1f2937; font-size: 1rem;'>{student.first_name} {student.last_name}</div>
-                        
-                        <div style='color: #4b5563; font-size: 1rem;'>Grade:</div>
-                        <div style='color: #1f2937; font-size: 1rem;'>{student.grade}</div>
-                        
-                        <div style='color: #4b5563; font-size: 1rem;'>Attendance:</div>
-                        <div style='color: #1f2937; font-size: 1rem;'>{attendance_rate:.1f}%</div>
+                f"""<div style='padding: 1rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem;'>
+                    <div style='font-family: "Source Sans Pro", sans-serif;'>
+                        <div><span style='color: #4b5563;'>Student:</span> <span style='color: #1f2937;'>{student.first_name} {student.last_name}</span></div>
+                        <div style='margin-top: 0.5rem;'><span style='color: #4b5563;'>Grade:</span> <span style='color: #1f2937;'>{student.grade}</span></div>
+                        <div style='margin-top: 0.5rem;'><span style='color: #4b5563;'>Attendance:</span> <span style='color: #1f2937;'>{attendance_rate:.1f}%</span></div>
+                        <div style='margin-top: 0.5rem; color: {status_text_color};'>{status_text}</div>
                     </div>
-                    <div style='margin-top: 1rem; color: {status_text_color}; font-size: 1rem;'>{status_text}</div>
                 </div>""",
                 unsafe_allow_html=True
             )
