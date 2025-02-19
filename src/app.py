@@ -454,42 +454,14 @@ def show_dashboard():
                 # Add extra spacing after tiers
                 st.markdown("<br><br>", unsafe_allow_html=True)
                 
-                # Show absence patterns
-                patterns = analyze_absence_patterns(grade=grade)
-                if patterns:
-                    st.subheader("Absence Patterns")
-                    
-                    # Day of week pattern
-                    values = patterns['day_of_week'].fillna(0)
-                    
-                    fig = go.Figure(data=[
-                        go.Bar(
-                            x=values.index,
-                            y=values.values,
-                            marker_color='#2563eb',
-                            hovertemplate='Day: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>',
-                            text=[f'{val:.1f}%' if not pd.isna(val) else 'No data' for val in patterns['day_of_week'].values],
-                            textposition='auto'
-                        )
-                    ])
-                    
-                    fig.update_layout(
-                        title="Absences by Day of Week",
-                        xaxis_title="Day of Week",
-                        yaxis_title="Absence Rate (%)",
-                        showlegend=False,
-                        margin=dict(l=40, r=20, t=40, b=40),
-                        height=300,
-                        plot_bgcolor='white',
-                        yaxis=dict(
-                            gridcolor='#e5e7eb',
-                            range=[0, max(values) * 1.2] if not values.empty else [0, 100]  # Add 20% padding for labels
-                        )
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.warning("No attendance data available for the selected time period.")
+                # Show attendance summary
+                st.subheader("Attendance Summary")
+                st.info("""
+                    Note: Our current data only shows total absences per academic year. 
+                    We don't have day-by-day attendance records to show which specific days 
+                    students were absent. To get this information, we would need daily 
+                    attendance records rather than just yearly totals.
+                    """)
             except Exception as e:
                 st.error(f"Error loading attendance data: {str(e)}")
 
