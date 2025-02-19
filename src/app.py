@@ -309,24 +309,10 @@ def main():
 def show_data_upload():
     st.header("Data Management")
     
-    # Add custom CSS for data management tabs
-    st.markdown("""
-        <style>
-        /* Target data management section specifically */
-        section[data-testid="stSidebar"] ~ section div[data-testid="stVerticalBlock"]:has(div.block-container) div[data-baseweb="tab-list"] {
-            justify-content: flex-start !important;
-            margin-left: 0 !important;
-            border-bottom: 1px solid #e5e7eb !important;
-        }
-        section[data-testid="stSidebar"] ~ section div[data-testid="stVerticalBlock"]:has(div.block-container) div[data-baseweb="tab"] {
-            font-size: 0.875rem !important;
-            padding: 0.5rem 1rem !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # Create tabs for upload and management
-    upload_tab, manage_tab = st.tabs(["Upload New Data", "Manage Existing Data"])
+    # Use radio buttons instead of tabs
+    col1, col2 = st.columns([2, 4])
+    with col1:
+        data_section = st.radio("", ["Upload New Data", "Manage Existing Data"], label_visibility="collapsed")
     
     with upload_tab:
         st.subheader("Upload Attendance Data")
@@ -374,7 +360,7 @@ def show_data_upload():
             st.error(f"Error importing data: {str(e)}")
             st.error("Please make sure your file follows the required format and column names.")
     
-    with manage_tab:
+    else:  # Manage Existing Data
         st.subheader("Manage Uploaded Files")
         
         # Get the data directory path
