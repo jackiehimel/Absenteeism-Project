@@ -714,9 +714,12 @@ def show_student_details():
         st.info("No students found in the database")
         return
     
-    # Student selector
-    student_ids = [s.id for s in students]
-    student_id = st.selectbox("Select Student", student_ids, key="student_details_select")
+    # Student selector with formatted display
+    student_options = [f"Student {s.id}" for s in students]
+    selected_option = st.selectbox("Select Student", student_options, key="student_details_select")
+    
+    # Extract the student ID from the selected option
+    student_id = int(selected_option.split()[1]) if selected_option else None
     
     if student_id:
         student = session.query(Student).get(student_id)
