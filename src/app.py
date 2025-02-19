@@ -1455,11 +1455,11 @@ def show_interventions():
                         
                         with details_col:
                             # Show current details
-                            st.markdown(f"<div style='font-family: "Source Sans Pro", sans-serif; font-size: 1rem;'>
-                                <p style='margin: 0.5rem 0; color: #1f2937;'><strong>Start Date:</strong> {intervention.start_date}</p>
+                            st.markdown(f'''<div style="font-family: 'Source Sans Pro', sans-serif; font-size: 1rem;">
+                                <p style="margin: 0.5rem 0; color: #1f2937;"><strong>Start Date:</strong> {intervention.start_date}</p>
                                 {f'<p style="margin: 0.5rem 0; color: #1f2937;"><strong>End Date:</strong> {intervention.end_date}</p>' if not intervention.is_ongoing and intervention.end_date else ''}
-                                <p style='margin: 0.5rem 0; color: #1f2937;'><strong>Notes:</strong> {intervention.notes}</p>
-                            </div>", unsafe_allow_html=True)
+                                <p style="margin: 0.5rem 0; color: #1f2937;"><strong>Notes:</strong> {intervention.notes}</p>
+                            </div>''', unsafe_allow_html=True)
                         
                         with edit_col:
                             if st.button("Edit", key=f"edit_{intervention.id}"):
