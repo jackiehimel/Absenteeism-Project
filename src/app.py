@@ -703,8 +703,7 @@ def show_chronic_absenteeism():
         st.warning("No attendance data available for the selected criteria")
         return
         
-    # Show tier summary
-    st.subheader("Attendance Tiers Summary")
+    # Show tier summary at the top
     st.markdown("<div class='info-card'>", unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     
@@ -741,14 +740,9 @@ def show_chronic_absenteeism():
         )
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Show detailed student lists
-    st.subheader("Students Requiring Intervention")
-    
+    # Show student lists for at-risk students
     if tiers['tier3'] or tiers['tier2']:
-        # Combine tier 3 and tier 2 students for analysis
         at_risk_students = tiers['tier3'] + tiers['tier2']
-        
-        # Create DataFrame for analysis
         df = pd.DataFrame([
             {
                 'Student ID': t['student'].id,
@@ -760,6 +754,22 @@ def show_chronic_absenteeism():
                 'Race': t['student'].race
             } for t in at_risk_students
         ])
+        
+        # Show Tier 3 students
+        if tiers['tier3']:
+            st.markdown("<div class='status-card status-danger'>Tier 3 - Chronic Absenteeism (Below 80% Attendance)</div>", unsafe_allow_html=True)
+            chronic_df = df[df['Tier'] == '3 (Chronic)'].copy()
+            chronic_df['Attendance Rate'] = chronic_df['Attendance Rate'].apply(lambda x: f"{x:.1f}%")
+            chronic_df['Last Updated'] = pd.to_datetime(chronic_df['Last Updated']).dt.strftime('%Y-%m-%d')
+            st.dataframe(chronic_df.drop('Tier', axis=1), hide_index=True)
+        
+        # Show Tier 2 students
+        if tiers['tier2']:
+            st.markdown("<div class='status-card status-warning'>Tier 2 - At Risk (80-84.99% Attendance)</div>", unsafe_allow_html=True)
+            at_risk_df = df[df['Tier'] == '2 (At Risk)'].copy()
+            at_risk_df['Attendance Rate'] = at_risk_df['Attendance Rate'].apply(lambda x: f"{x:.1f}%")
+            at_risk_df['Last Updated'] = pd.to_datetime(at_risk_df['Last Updated']).dt.strftime('%Y-%m-%d')
+            st.dataframe(at_risk_df.drop('Tier', axis=1), hide_index=True)
         
         # Show summary statistics
         st.subheader("Demographics of At-Risk Students")
@@ -833,22 +843,9 @@ def show_chronic_absenteeism():
             st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # Show detailed tables by tier
-        st.markdown("<div class='info-card'>", unsafe_allow_html=True)
-        if tiers['tier3']:
-            st.markdown("<div class='status-card status-danger'>Tier 3 - Chronic Absenteeism (Below 80% Attendance)</div>", unsafe_allow_html=True)
-            chronic_df = df[df['Tier'] == '3 (Chronic)'].copy()
-            chronic_df['Attendance Rate'] = chronic_df['Attendance Rate'].apply(lambda x: f"{x:.1f}%")
-            chronic_df['Last Updated'] = pd.to_datetime(chronic_df['Last Updated']).dt.strftime('%Y-%m-%d')
-            st.dataframe(chronic_df.drop('Tier', axis=1), hide_index=True)
+
         
-        if tiers['tier2']:
-            st.markdown("<div class='status-card status-warning'>Tier 2 - At Risk (80-84.99% Attendance)</div>", unsafe_allow_html=True)
-            at_risk_df = df[df['Tier'] == '2 (At Risk)'].copy()
-            at_risk_df['Attendance Rate'] = at_risk_df['Attendance Rate'].apply(lambda x: f"{x:.1f}%")
-            at_risk_df['Last Updated'] = pd.to_datetime(at_risk_df['Last Updated']).dt.strftime('%Y-%m-%d')
-            st.dataframe(at_risk_df.drop('Tier', axis=1), hide_index=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+
     else:
         st.success("No students currently requiring immediate intervention.")
 
@@ -1131,20 +1128,38 @@ def show_interventions():
         
         # Show student info
         st.subheader("Student Information")
-        col1, col2 = st.columns(2)
         
-        with col1:
-            st.write(f"Name: {student.first_name} {student.last_name}")
-            st.write(f"Grade: {student.grade}")
+        # Calculate attendance rate and determine status color
+        attendance_rate = calculate_attendance_rate(student.id)
+        if attendance_rate < 80:
+            status_color = '#fef2f2'
+            text_color = '#dc2626'
+            status_text = '⚠️ Chronic Absenteeism'
+        elif attendance_rate < 85:
+            status_color = '#fef3c7'
+            text_color = '#d97706'
+            status_text = '⚠️ At Risk'
+        else:
+            status_color = '#ecfdf5'
+            text_color = '#059669'
+            status_text = '✅ On Track'
         
-        with col2:
-            attendance_rate = calculate_attendance_rate(student.id)
-            st.write(f"Attendance Rate: {attendance_rate:.1f}%")
-            
-            if attendance_rate < 80:
-                st.error("⚠️ Chronic Absenteeism")
-            elif attendance_rate < 90:
-                st.warning("⚠️ At Risk")
+        # Display student info in a styled card
+        st.markdown(
+            f"""<div style='padding: 1rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem;'>
+                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                    <div>
+                        <h3 style='color: {text_color}; margin: 0;'>{student.first_name} {student.last_name}</h3>
+                        <p style='margin: 0.5rem 0;'>Grade {student.grade}</p>
+                    </div>
+                    <div style='text-align: right;'>
+                        <h3 style='color: {text_color}; margin: 0;'>{attendance_rate:.1f}%</h3>
+                        <p style='margin: 0.5rem 0;'>{status_text}</p>
+                    </div>
+                </div>
+            </div>""",
+            unsafe_allow_html=True
+        )
         
         # Show existing interventions
         st.subheader("Current Interventions")
