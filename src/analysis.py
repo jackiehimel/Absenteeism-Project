@@ -53,10 +53,10 @@ def get_tiered_attendance(grade=None):
     
     # Group students by tier
     tiers = {
-        'tier3': [], # Chronic: < 80%
-        'tier2': [], # At Risk: 80-84.99%
-        'tier1': [], # Warning: 85-89.99%
-        'on_track': [] # On Track: >= 90%
+        'tier3': [], # Chronic: Missing 20% or more (≤ 80% attendance)
+        'tier2': [], # At Risk: Missing 15-19.99% (80.01-85% attendance)
+        'tier1': [], # Warning: Missing 10-14.99% (85.01-90% attendance)
+        'on_track': [] # On Track: Missing <10% (>90% attendance)
     }
     
     for student, attendance_rate, record_date in results:
@@ -66,11 +66,11 @@ def get_tiered_attendance(grade=None):
             'last_updated': record_date
         }
         
-        if attendance_rate < 80:
+        if attendance_rate <= 80:
             tiers['tier3'].append(student_data)
-        elif attendance_rate < 85:
+        elif attendance_rate <= 85:
             tiers['tier2'].append(student_data)
-        elif attendance_rate < 90:
+        elif attendance_rate <= 90:
             tiers['tier1'].append(student_data)
         else:
             tiers['on_track'].append(student_data)
