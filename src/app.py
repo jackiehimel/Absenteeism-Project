@@ -1231,105 +1231,90 @@ def show_interventions():
     # Get student list
     session = get_session()
     students = session.query(Student).all()
-    student_names = [f"{s.first_name} {s.last_name}" for s in students]
     
-    # Student selection with ID and name
-    student_options = [f"{s.id} - {s.first_name} {s.last_name}" for s in students]
-    selected_student = st.selectbox("Select Student", student_options)
-    if selected_student:
-        student_id = int(selected_student.split(' - ')[0])
-        student = session.query(Student).get(student_id)
+    # Create two columns for the layout
+    col1, col2 = st.columns([3, 2])
+    
+    with col1:
+        st.subheader("Add New Intervention")
         
-        # Show student info
-        st.subheader("Student Information")
-        
-        # Calculate attendance rate and determine status color
-        attendance_rate = calculate_attendance_rate(student.id)
-        if attendance_rate < 80:
-            status_color = '#fef2f2'
-            text_color = '#dc2626'
-            status_text = '⚠️ Chronic Absenteeism'
-        elif attendance_rate < 85:
-            status_color = '#fef3c7'
-            text_color = '#d97706'
-            status_text = '⚠️ At Risk'
-        else:
-            status_color = '#ecfdf5'
-            text_color = '#059669'
-            status_text = '✅ On Track'
-        
-        # Display student info in a styled card
-        st.markdown(
-            f"""<div style='padding: 1rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem;'>
-                <div style='display: flex; flex-direction: column; gap: 0.75rem; font-family: "Source Sans Pro", sans-serif;'>
-                    <div style='color: {text_color};'>{student.first_name} {student.last_name}</div>
-                    <div style='color: {text_color};'>Grade {student.grade}</div>
-                    <div style='color: {text_color};'>{attendance_rate:.1f}%</div>
-                    <div style='color: {text_color};'>{status_text}</div>
-                </div>
-            </div>""",
-            unsafe_allow_html=True
+        # Student selection with ID and name at the top of the form
+        student_options = [f"{s.id} - {s.first_name} {s.last_name}" for s in students]
+        selected_student = st.selectbox(
+            "Select Student",
+            student_options,
+            help="Choose the student you want to add an intervention for"
         )
         
-        # Show existing interventions
-        st.subheader("Current Interventions")
-        interventions = session.query(Intervention).filter_by(student_id=student.id).all()
+        if selected_student:
+            student_id = int(selected_student.split(' - ')[0])
+            student = session.query(Student).get(student_id)
+            
+            # Ongoing checkbox outside form
+            is_ongoing = st.checkbox(
+                "This is an ongoing intervention",
+                value=True,
+                help="Check this box if the intervention is still in progress",
+                key="intervention_ongoing_status"
+            )
         
-        for intervention in interventions:
-            with st.expander(f"{intervention.intervention_type} - {'Ongoing' if intervention.is_ongoing else 'Completed'}"):
-                st.write(f"Start Date: {intervention.start_date}")
-                if not intervention.is_ongoing and intervention.end_date:
-                    st.write(f"End Date: {intervention.end_date}")
-                st.write(f"Notes: {intervention.notes}")
-        
-        # Add new intervention
-        st.subheader("Add New Intervention")
         with st.form(key="new_intervention_form"):
-            # Show student ID (read-only)
-            st.text_input("Student ID", value=str(student.id), disabled=True)
             
-            # Intervention type selection
-            intervention_type_options = [
-                "Point Person",
-                "Home Visits",
-                "Morning Phone Call",
-                "Buddy System",
-                "Convos with Parents",
-                "Social Worker Weekly Attendance Meeting",
-                "Celebration",
-                "Family Meetings",
-                "Letters",
-                "Incentivizes",
-                "Family trips",
-                "Individual Point Sheets For Attendance",
-                "Attendance Contracts",
-                "Lobby",
-                "Other"
-            ]
+            # Intervention type selection with categories
+            st.markdown("##### Intervention Type")
+            intervention_categories = {
+                "Communication": [
+                    "Morning Phone Call",
+                    "Convos with Parents",
+                    "Letters",
+                ],
+                "In-Person Support": [
+                    "Point Person",
+                    "Home Visits",
+                    "Buddy System",
+                    "Social Worker Weekly Attendance Meeting",
+                    "Family Meetings",
+                ],
+                "Incentives & Recognition": [
+                    "Celebration",
+                    "Incentivizes",
+                    "Family trips",
+                ],
+                "Monitoring & Agreements": [
+                    "Individual Point Sheets For Attendance",
+                    "Attendance Contracts",
+                    "Lobby",
+                ],
+                "Other": ["Other"]
+            }
             
-            # Use radio buttons for intervention type with styled header
-            st.markdown(
-                """
-                <div style='background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>
-                    <h3 style='margin: 0; color: #0e1117; font-size: 1rem;'>Intervention Type</h3>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            # Create a list of all options for the radio button
+            intervention_type_options = [opt for opts in intervention_categories.values() for opt in opts]
+            
+            # Show categories as headers above related options
+            for category, options in intervention_categories.items():
+                st.markdown(f"<small>{category}</small>", unsafe_allow_html=True)
+                for option in options:
+                    if option == selected_type:
+                        st.markdown(f"<div style='margin-left: 1rem; color: #2563eb;'>▸ {option}</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div style='margin-left: 1rem; color: #666;'>• {option}</div>", unsafe_allow_html=True)
+            
             selected_type = st.radio(
-                label="Choose an intervention type",
+                "Choose an intervention type",
                 options=intervention_type_options,
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                horizontal=True,
+                key="intervention_type"
             )
             
-            # Set final intervention type
-            final_intervention_type = selected_type
-                
             # Handle "Other" option
+            final_intervention_type = selected_type
             if selected_type == "Other":
                 other_type = st.text_input(
-                    "Please specify the intervention type", 
-                    key="new_intervention_other_type"
+                    "Please specify the intervention type",
+                    key="intervention_other_type",
+                    help="Enter a custom intervention type"
                 )
                 if other_type:
                     final_intervention_type = other_type
@@ -1341,14 +1326,7 @@ def show_interventions():
                 key="new_intervention_start_date"
             )
             
-            # Ongoing status checkbox
-            is_ongoing = st.checkbox(
-                "This is an ongoing intervention",
-                value=True,
-                help="Check this box if the intervention is still in progress"
-            )
-            
-            # End date (only shown if not ongoing)
+            # End date (shown if not ongoing)
             end_date = None
             if not is_ongoing:
                 end_date = st.date_input(
@@ -1400,6 +1378,53 @@ def show_interventions():
                     session.rollback()
                 finally:
                     session.close()
+            
+    # Show student info and existing interventions in the right column
+    if 'student' in locals():
+        with col2:
+            st.subheader("Student Information")
+            
+            # Calculate attendance rate and determine status color
+            attendance_rate = calculate_attendance_rate(student.id)
+            if attendance_rate < 80:
+                status_color = '#fef2f2'
+                text_color = '#dc2626'
+                status_text = 'Chronic Absenteeism'
+            elif attendance_rate < 85:
+                status_color = '#fef3c7'
+                text_color = '#d97706'
+                status_text = 'At Risk'
+            else:
+                status_color = '#ecfdf5'
+                text_color = '#059669'
+                status_text = 'On Track'
+            
+            # Display student info in a styled card
+            st.markdown(
+                f"""<div style='padding: 1rem; border-radius: 0.5rem; background-color: {status_color}; margin-bottom: 1rem;'>
+                    <div style='display: flex; flex-direction: column; gap: 0.75rem; font-family: "Source Sans Pro", sans-serif;'>
+                        <div style='color: {text_color};'>{student.first_name} {student.last_name}</div>
+                        <div style='color: {text_color};'>Grade {student.grade}</div>
+                        <div style='color: {text_color};'>{attendance_rate:.1f}%</div>
+                        <div style='color: {text_color};'>{status_text}</div>
+                    </div>
+                </div>""",
+                unsafe_allow_html=True
+            )
+            
+            # Show existing interventions
+            st.subheader("Current Interventions")
+            interventions = session.query(Intervention).filter_by(student_id=student.id).all()
+            
+            if interventions:
+                for intervention in interventions:
+                    with st.expander(f"{intervention.intervention_type} - {'Ongoing' if intervention.is_ongoing else 'Completed'}"):
+                        st.write(f"Start Date: {intervention.start_date}")
+                        if not intervention.is_ongoing and intervention.end_date:
+                            st.write(f"End Date: {intervention.end_date}")
+                        st.write(f"Notes: {intervention.notes}")
+            else:
+                st.info("No interventions recorded yet")
 
 if __name__ == "__main__":
     main()
