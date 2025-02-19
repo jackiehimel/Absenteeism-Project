@@ -505,31 +505,28 @@ def show_dashboard():
                     
                     st.plotly_chart(fig1, use_container_width=True)
                     
-                    # 2. Absence Impact
-                    total_school_days = df['total_days'].sum()
-                    total_absences = df['total_absences'].sum()
-                    total_students = df['total_students'].mean()
+                    # 2. Most Recent Year's Impact
+                    latest_year = df.iloc[-1]
                     
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric(
-                            "Total School Days Lost",
-                            f"{total_absences:,}",
-                            help="Total number of school days missed across all students"
+                            f"Days Missed ({int(latest_year['year'])})",
+                            f"{int(latest_year['total_absences']):,}",
+                            help=f"Total school days missed in {int(latest_year['year'])}"
                         )
                     with col2:
-                        days_per_student = total_absences / total_students
+                        days_per_student = latest_year['total_absences'] / latest_year['total_students']
                         st.metric(
-                            "Avg Days Missed per Student",
+                            f"Avg Days Missed per Student ({int(latest_year['year'])})",
                             f"{days_per_student:.1f}",
-                            help="Average number of days each student missed"
+                            help=f"Average days each student missed in {int(latest_year['year'])}"
                         )
                     with col3:
-                        absence_rate = (total_absences / total_school_days) * 100
                         st.metric(
-                            "Overall Absence Rate",
-                            f"{absence_rate:.1f}%",
-                            help="Percentage of total possible school days that were missed"
+                            f"Students Tracked ({int(latest_year['year'])})",
+                            f"{int(latest_year['total_students']):,}",
+                            help=f"Number of students tracked in {int(latest_year['year'])}"
                         )
                     
                     # 3. Year-over-Year Change
