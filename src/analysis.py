@@ -151,9 +151,19 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
     result = df.groupby('period')['present_percentage'].agg(['mean', 'count']).reset_index()
     result.columns = ['period', 'attendance_rate', 'record_count']
     
-    # Only include periods with sufficient data points
-    min_records = 1 if interval == 'yearly' else 2 if interval == 'monthly' else 3
-    result = result[result['record_count'] >= min_records]
+    if interval == 'monthly':
+        # Create a complete date range for all months
+        date_range = pd.date_range(start=start_date, end=end_date, freq='MS')
+        all_periods = pd.DataFrame({'period': date_range})
+        
+        # Merge with actual data, filling in missing months
+        result = pd.merge(all_periods, result, on='period', how='left')
+        
+        # Forward fill missing values, then backward fill any remaining
+        result['attendance_rate'] = result['attendance_rate'].fillna(method='ffill').fillna(method='bfill')
+        
+        # If still have NaN (happens if all data is missing), fill with 100
+        result['attendance_rate'] = result['attendance_rate'].fillna(100.0)
     
     # Sort by period and select final columns
     result = result[['period', 'attendance_rate']].sort_values('period')
