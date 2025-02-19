@@ -1200,37 +1200,48 @@ def show_interventions():
             selected_type = st.selectbox(
                 "Intervention Type",
                 intervention_type_options,
-                key="intervention_type_select",
-                placeholder="Select an intervention type"
+                key="new_intervention_type"
             )
             
             # Show text input for "Other" option
             final_intervention_type = selected_type
             if selected_type == "Other":
-                other_type = st.text_input("Please specify the intervention type", key="other_type_input")
+                other_type = st.text_input(
+                    "Please specify the intervention type", 
+                    key="new_intervention_other_type"
+                )
                 if other_type:
                     final_intervention_type = other_type
                     
             # Start date
-            start_date = st.date_input("Start Date", datetime.now(), key="intervention_start_date")
+            start_date = st.date_input(
+                "Start Date", 
+                datetime.now(), 
+                key="new_intervention_start_date"
+            )
             
             # Optional end date (always visible)
             end_date = st.date_input(
                 "End Date (Optional)",
-                value=None,
+                value=datetime.now(),
                 min_value=start_date,
                 help="Leave empty if intervention is ongoing",
-                key="end_date"
+                key="new_intervention_end_date"
+            )
+            
+            # Notes field
+            notes = st.text_area(
+                "Notes", 
+                key="new_intervention_notes"
             )
             
             # Set ongoing status based on whether end date is provided
             is_ongoing = end_date is None
             
-            # Notes field
-            notes = st.text_area("Notes", key="notes")
-            
             # Submit button
-            if st.form_submit_button("Add Intervention"):
+            submitted = st.form_submit_button("Add Intervention")
+            
+            if submitted:
                 try:
                     # Validate that if "Other" is selected, a custom type was provided
                     if selected_type == "Other" and not other_type:
