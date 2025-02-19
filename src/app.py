@@ -465,7 +465,9 @@ def show_dashboard():
                             x=patterns['day_of_week'].index,
                             y=patterns['day_of_week'].values,
                             marker_color='#2563eb',
-                            hovertemplate='Day: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
+                            hovertemplate='Day: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>',
+                            text=[f'{val:.1f}%' for val in patterns['day_of_week'].values],
+                            textposition='auto'
                         )
                     ])
                     
@@ -479,7 +481,7 @@ def show_dashboard():
                         plot_bgcolor='white',
                         yaxis=dict(
                             gridcolor='#e5e7eb',
-                            range=[0, max(patterns['day_of_week'].values) * 1.1]  # Add 10% padding
+                            range=[0, max(patterns['day_of_week'].values) * 1.2]  # Add 20% padding for labels
                         )
                     )
                     

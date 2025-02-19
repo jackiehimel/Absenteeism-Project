@@ -182,23 +182,21 @@ def analyze_absence_patterns(grade=None):
     df = pd.DataFrame([
         {
             'date': pd.to_datetime(record.date),
-            'month': pd.to_datetime(record.date).strftime('%B'),  # Full month name
+            'day_of_week': pd.to_datetime(record.date).strftime('%A'),  # Full day name
             'present_percentage': record.present_percentage,
             'absent_percentage': record.absent_percentage
         } for record in records
     ])
     
-    # Calculate actual monthly patterns
-    month_patterns = df.groupby('month')['absent_percentage'].mean()
-    
-    # Calculate actual day patterns (since we only have September data,
-    # we'll use a uniform distribution)
+    # Calculate actual day-of-week patterns
     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    day_patterns = pd.Series([20, 20, 20, 20, 20], index=day_order)
+    day_patterns = df.groupby('day_of_week')['absent_percentage'].mean()
+    
+    # Ensure we have all weekdays (fill missing with 0)
+    day_patterns = day_patterns.reindex(day_order, fill_value=0)
     
     patterns = {
-        'day_of_week': day_patterns,
-        'month': month_patterns
+        'day_of_week': day_patterns
     }
     
     return patterns
