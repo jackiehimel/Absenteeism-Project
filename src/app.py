@@ -1213,26 +1213,27 @@ def show_interventions():
             start_date = st.date_input("Start Date", datetime.now(), key="intervention_start_date")
             
             # Status selection
-            intervention_status = st.radio(
-                "Intervention Status",
-                options=["Ongoing", "Completed"],
-                horizontal=True,
-                key="intervention_status"
-            )
+            col1, col2 = st.columns([1, 2])  # Make the radio buttons take less space
+            with col1:
+                intervention_status = st.radio(
+                    "Intervention Status",
+                    options=["Ongoing", "Completed"],
+                    key="intervention_status",
+                    horizontal=True
+                )
             
             # End date field appears when Completed is selected
             end_date = None
             if intervention_status == "Completed":
-                end_date = st.date_input(
-                    "End Date",
-                    value=start_date,  # Default to start date
-                    min_value=start_date,  # Cannot be before start date
-                    max_value=datetime.now().date(),  # Cannot be in the future
-                    help="Must be after the start date and not in the future",
-                    key="intervention_end_date"
-                )
-            else:
-                end_date = None
+                with col2:
+                    end_date = st.date_input(
+                        "End Date",
+                        value=start_date,  # Default to start date
+                        min_value=start_date,  # Cannot be before start date
+                        max_value=datetime.now().date(),  # Cannot be in the future
+                        help="Must be after the start date and not in the future",
+                        key="intervention_end_date"
+                    )
             
             # Set is_ongoing based on status
             is_ongoing = (intervention_status == "Ongoing")
