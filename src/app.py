@@ -317,7 +317,10 @@ def show_data_upload():
     if data_section == "Upload New Data":
         st.subheader("Upload Attendance Data")
         
-        # Show upload instructions
+        # Show file uploader first
+        uploaded_file = st.file_uploader("Upload Excel File", type=['xlsx'])
+        
+        # Show upload instructions below
         st.markdown("""
             ### Upload Instructions
             Please ensure your Excel file follows these requirements:
@@ -334,9 +337,6 @@ def show_data_upload():
                 - NYF status
                 - OSIS ID Number
         """, unsafe_allow_html=True)
-        
-        # Show file uploader
-        uploaded_file = st.file_uploader("Upload Excel File", type=['xlsx'])
     
         if uploaded_file:
             try:
