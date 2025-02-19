@@ -77,7 +77,14 @@ def get_tiered_attendance(grade=None):
     
     return tiers
 
-def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date=None, interval='daily'):
+def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date=None, interval='monthly'):
+    # If no end_date is provided, use today
+    if not end_date:
+        end_date = datetime.now().date()
+    
+    # If no start_date is provided, default to 6 months before end_date
+    if not start_date:
+        start_date = (end_date - timedelta(days=180))
     """Analyze attendance trends with flexible time intervals
     interval: 'daily', 'weekly', 'monthly', or 'yearly'
     """

@@ -316,9 +316,13 @@ def show_dashboard():
     
     col1, col2, col3 = st.columns([2, 2, 1])
     with col1:
+        # Calculate default dates
+        default_end_date = min(datetime.now().date(), latest_date)
+        default_start_date = max(default_end_date - timedelta(days=180), earliest_date)
+        
         start_date = st.date_input(
             "Start Date",
-            min(datetime.now().date(), earliest_date),  # Default to earlier of current date or earliest record
+            default_start_date,
             min_value=earliest_date,
             max_value=latest_date,
             key="start_date"
@@ -326,7 +330,7 @@ def show_dashboard():
     with col2:
         end_date = st.date_input(
             "End Date",
-            latest_date,
+            default_end_date,
             min_value=earliest_date,
             max_value=latest_date,
             key="end_date"
@@ -335,6 +339,7 @@ def show_dashboard():
         interval = st.selectbox(
             "Time Interval",
             ["Daily", "Weekly", "Monthly", "Yearly"],
+            index=2,  # Default to Monthly
             key="interval"
         )
     
