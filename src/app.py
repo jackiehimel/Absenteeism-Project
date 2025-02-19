@@ -7,6 +7,7 @@ import os
 from data_import import import_excel_data
 from database import Student, AttendanceRecord, Intervention, get_session
 from analysis import get_attendance_trends, get_tiered_attendance, calculate_attendance_rate, analyze_absence_patterns
+from sqlalchemy import func
 
 def main():
     import os  # Add this at the top
@@ -457,39 +458,44 @@ def show_dashboard():
                 # Show attendance insights
                 st.subheader("Attendance Insights")
                 
-                # Get attendance data
+                # Get attendance data by academic year
                 session = get_session()
                 query = session.query(
-                    Student.grade,
-                    AttendanceRecord.total_days,
-                    AttendanceRecord.present_days,
-                    AttendanceRecord.absent_days,
-                    AttendanceRecord.absent_percentage
-                ).join(AttendanceRecord)
+                    AttendanceRecord.date,
+                    func.count(Student.id).label('total_students'),
+                    func.avg(AttendanceRecord.absent_percentage).label('avg_absence'),
+                    func.sum(AttendanceRecord.absent_days).label('total_absences'),
+                    func.sum(AttendanceRecord.total_days).label('total_days')
+                ).join(Student)
                 
                 if grade:
                     query = query.filter(Student.grade == grade)
                 
+                # Group by academic year
+                query = query.group_by(AttendanceRecord.date)
                 records = query.all()
                 
                 if records:
                     # Convert to DataFrame
-                    df = pd.DataFrame(records, columns=['grade', 'total_days', 'present_days', 'absent_days', 'absent_percentage'])
+                    df = pd.DataFrame(records, columns=['year', 'total_students', 'avg_absence', 'total_absences', 'total_days'])
+                    df['year'] = pd.to_datetime(df['year']).dt.year
                     
-                    # 1. Absence Distribution
+                    # 1. Yearly Trends
                     fig1 = go.Figure()
-                    fig1.add_trace(go.Histogram(
-                        x=df['absent_percentage'],
-                        nbinsx=20,
-                        name='Students',
+                    fig1.add_trace(go.Bar(
+                        x=df['year'],
+                        y=df['avg_absence'],
                         marker_color='#2563eb',
-                        hovertemplate='Absence Rate: %{x:.1f}%<br>Count: %{y}<extra></extra>'
+                        text=[f'{val:.1f}%' for val in df['avg_absence']],
+                        textposition='auto',
+                        hovertemplate='Year: %{x}<br>Average Absence: %{y:.1f}%<br>Students: %{customdata[0]}<extra></extra>',
+                        customdata=df[['total_students']].values
                     ))
                     
                     fig1.update_layout(
-                        title='Distribution of Absence Rates',
-                        xaxis_title='Absence Rate (%)',
-                        yaxis_title='Number of Students',
+                        title='Average Absence Rate by Academic Year',
+                        xaxis_title='Academic Year',
+                        yaxis_title='Average Absence Rate (%)',
                         showlegend=False,
                         margin=dict(l=40, r=20, t=40, b=40),
                         height=300,
@@ -499,55 +505,45 @@ def show_dashboard():
                     
                     st.plotly_chart(fig1, use_container_width=True)
                     
-                    # 2. Attendance vs Total Days
-                    fig2 = go.Figure()
-                    fig2.add_trace(go.Scatter(
-                        x=df['total_days'],
-                        y=df['absent_percentage'],
-                        mode='markers',
-                        marker=dict(
-                            color='#2563eb',
-                            size=8,
-                            opacity=0.6
-                        ),
-                        hovertemplate='Total Days: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>'
-                    ))
+                    # 2. Absence Impact
+                    total_school_days = df['total_days'].sum()
+                    total_absences = df['total_absences'].sum()
+                    total_students = df['total_students'].mean()
                     
-                    fig2.update_layout(
-                        title='Absence Rate vs. Total Days Enrolled',
-                        xaxis_title='Total Days Enrolled',
-                        yaxis_title='Absence Rate (%)',
-                        showlegend=False,
-                        margin=dict(l=40, r=20, t=40, b=40),
-                        height=300,
-                        plot_bgcolor='white',
-                        yaxis=dict(gridcolor='#e5e7eb'),
-                        xaxis=dict(gridcolor='#e5e7eb')
-                    )
-                    
-                    st.plotly_chart(fig2, use_container_width=True)
-                    
-                    # 3. Summary Statistics
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric(
-                            "Average Absence Rate",
-                            f"{df['absent_percentage'].mean():.1f}%",
-                            help="Mean absence rate across all students"
+                            "Total School Days Lost",
+                            f"{total_absences:,}",
+                            help="Total number of school days missed across all students"
                         )
                     with col2:
+                        days_per_student = total_absences / total_students
                         st.metric(
-                            "Median Absence Rate",
-                            f"{df['absent_percentage'].median():.1f}%",
-                            help="Median absence rate (50th percentile)"
+                            "Avg Days Missed per Student",
+                            f"{days_per_student:.1f}",
+                            help="Average number of days each student missed"
                         )
                     with col3:
-                        high_absence = (df['absent_percentage'] > 20).sum()
+                        absence_rate = (total_absences / total_school_days) * 100
                         st.metric(
-                            "Chronic Absences",
-                            f"{high_absence} students",
-                            help="Students with >20% absence rate"
+                            "Overall Absence Rate",
+                            f"{absence_rate:.1f}%",
+                            help="Percentage of total possible school days that were missed"
                         )
+                    
+                    # 3. Year-over-Year Change
+                    if len(df) > 1:
+                        df['pct_change'] = df['avg_absence'].pct_change() * 100
+                        latest_change = df['pct_change'].iloc[-1]
+                        
+                        st.markdown("### Year-over-Year Trend")
+                        if abs(latest_change) < 0.1:
+                            st.info("📊 Absence rate remained stable compared to last year")
+                        elif latest_change > 0:
+                            st.warning(f"📈 Absence rate increased by {latest_change:.1f}% compared to last year")
+                        else:
+                            st.success(f"📉 Absence rate decreased by {abs(latest_change):.1f}% compared to last year")
                 else:
                     st.warning("No attendance data available for the selected time period.")
             except Exception as e:
