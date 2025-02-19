@@ -460,13 +460,15 @@ def show_dashboard():
                     st.subheader("Absence Patterns")
                     
                     # Day of week pattern
+                    values = patterns['day_of_week'].fillna(0)
+                    
                     fig = go.Figure(data=[
                         go.Bar(
-                            x=patterns['day_of_week'].index,
-                            y=patterns['day_of_week'].values,
+                            x=values.index,
+                            y=values.values,
                             marker_color='#2563eb',
                             hovertemplate='Day: %{x}<br>Absence Rate: %{y:.1f}%<extra></extra>',
-                            text=[f'{val:.1f}%' for val in patterns['day_of_week'].values],
+                            text=[f'{val:.1f}%' if not pd.isna(val) else 'No data' for val in patterns['day_of_week'].values],
                             textposition='auto'
                         )
                     ])
@@ -481,7 +483,7 @@ def show_dashboard():
                         plot_bgcolor='white',
                         yaxis=dict(
                             gridcolor='#e5e7eb',
-                            range=[0, max(patterns['day_of_week'].values) * 1.2]  # Add 20% padding for labels
+                            range=[0, max(values) * 1.2] if not values.empty else [0, 100]  # Add 20% padding for labels
                         )
                     )
                     

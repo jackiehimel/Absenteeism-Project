@@ -168,7 +168,10 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
 def analyze_absence_patterns(grade=None):
     """Analyze patterns in absences (e.g., specific days of week, months)"""
     session = get_session()
-    query = session.query(AttendanceRecord)
+    query = session.query(
+        AttendanceRecord.date,
+        AttendanceRecord.absent_percentage
+    )
     
     if grade:
         query = query.join(Student).filter(Student.grade == grade)
@@ -178,22 +181,28 @@ def analyze_absence_patterns(grade=None):
     if not records:
         return None
     
-    # Convert records to DataFrame with proper datetime conversion
-    df = pd.DataFrame([
-        {
-            'date': pd.to_datetime(record.date),
-            'day_of_week': pd.to_datetime(record.date).strftime('%A'),  # Full day name
-            'present_percentage': record.present_percentage,
-            'absent_percentage': record.absent_percentage
-        } for record in records
-    ])
+    # Convert records to DataFrame
+    df = pd.DataFrame(records, columns=['date', 'absent_percentage'])
     
-    # Calculate actual day-of-week patterns
+    # Convert date string to datetime and extract day of week
+    df['date'] = pd.to_datetime(df['date'])
+    df['day_of_week'] = df['date'].dt.day_name()
+    
+    # Define weekday order and filter out weekends
     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    df = df[df['day_of_week'].isin(day_order)]
+    
+    # Calculate average absence rate for each day
     day_patterns = df.groupby('day_of_week')['absent_percentage'].mean()
     
-    # Ensure we have all weekdays (fill missing with 0)
-    day_patterns = day_patterns.reindex(day_order, fill_value=0)
+    # Sort by our custom order
+    day_patterns = day_patterns.reindex(day_order)
+    
+    # For debugging
+    print("Records per day:")
+    print(df.groupby('day_of_week').size())
+    print("\nAbsence rates:")
+    print(day_patterns)
     
     patterns = {
         'day_of_week': day_patterns
