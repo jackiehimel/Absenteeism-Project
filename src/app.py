@@ -1196,10 +1196,12 @@ def show_interventions():
                 "Other"
             ]
             
-            # Simple intervention type selection
-            selected_type = st.selectbox(
-                "Intervention Type",
-                intervention_type_options
+            # Use radio buttons for intervention type
+            st.write("Intervention Type")
+            selected_type = st.radio(
+                label="Choose an intervention type",
+                options=intervention_type_options,
+                label_visibility="collapsed"
             )
             
             # Set final intervention type
