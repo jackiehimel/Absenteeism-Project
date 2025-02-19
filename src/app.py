@@ -1196,10 +1196,12 @@ def show_interventions():
                 "Other"
             ]
             
+            # Intervention type with default display
             selected_type = st.selectbox(
                 "Intervention Type",
                 intervention_type_options,
-                key="intervention_type_select"
+                key="intervention_type_select",
+                placeholder="Select an intervention type"
             )
             
             # Show text input for "Other" option
@@ -1212,28 +1214,17 @@ def show_interventions():
             # Start date
             start_date = st.date_input("Start Date", datetime.now(), key="intervention_start_date")
             
-            # Status selection
-            status = st.radio(
-                "Status",
-                options=["Ongoing", "Completed"],
-                key="status",
-                horizontal=True,
-                index=0  # Default to Ongoing
+            # Optional end date (always visible)
+            end_date = st.date_input(
+                "End Date (Optional)",
+                value=None,
+                min_value=start_date,
+                help="Leave empty if intervention is ongoing",
+                key="end_date"
             )
             
-            # End date field appears ONLY when Completed is selected
-            end_date = None
-            is_ongoing = True
-            
-            if status == "Completed":
-                end_date = st.date_input(
-                    "End Date",
-                    value=start_date,
-                    min_value=start_date,
-                    max_value=datetime.now().date(),
-                    key="end_date"
-                )
-                is_ongoing = False
+            # Set ongoing status based on whether end date is provided
+            is_ongoing = end_date is None
             
             # Notes field
             notes = st.text_area("Notes", key="notes")
@@ -1247,7 +1238,7 @@ def show_interventions():
                         return
                         
                     # Validate dates
-                    if status == "Completed" and end_date and end_date < start_date:
+                    if end_date and end_date < start_date:
                         st.error("End date must be after start date")
                         return
                         
