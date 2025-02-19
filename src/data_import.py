@@ -107,7 +107,8 @@ def import_excel_data(file_path):
                     # Create new student
                     student = Student(
                         id=student_id,
-                        name=str(student_id),  # Using ID as name for privacy
+                        first_name=f"Student",  # Using generic first name for privacy
+                        last_name=str(student_id),  # Using ID as last name for privacy
                         grade=grade,
                         welfare_status=get_welfare_code(row.get('Welfare status')) if pd.notna(row.get('Welfare status')) else None,
                         nyf_status=str(row.get('NYF status')).upper() == 'YC' if pd.notna(row.get('NYF status')) else None,

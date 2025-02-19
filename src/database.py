@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Date, Float, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Date, Float, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
@@ -8,7 +8,8 @@ class Student(Base):
     __tablename__ = 'students'
     
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    first_name = Column(String)
+    last_name = Column(String)
     grade = Column(Integer)
     gender = Column(String)
     race = Column(String)
@@ -36,10 +37,11 @@ class Intervention(Base):
     
     id = Column(Integer, primary_key=True)
     student_id = Column(Integer, ForeignKey('students.id'))
-    date = Column(Date)
-    type = Column(String)
-    description = Column(String)
-    outcome = Column(String)
+    intervention_type = Column(String)
+    start_date = Column(Date)
+    end_date = Column(Date, nullable=True)
+    is_ongoing = Column(Boolean, default=True)
+    notes = Column(String)
     student = relationship("Student", back_populates="interventions")
 
 def init_db():

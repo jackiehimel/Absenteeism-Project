@@ -27,8 +27,8 @@ def main():
     session = get_session()
     student_count = session.query(Student).count()
     
-    # Use the exact path we see in the debug output
-    data_dir = "/mount/src/absenteeism-project/data"
+    # Get the data directory path relative to the src directory
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
     
     # # Debug information
     # st.write("Current directory:", os.getcwd())
@@ -1076,29 +1076,25 @@ def show_demographics():
         st.markdown("</div>", unsafe_allow_html=True)
 
 def show_interventions():
-    st.header("Interventions")
+    st.header("Student Interventions")
     
-    # Student selector
+    # Get student list
     session = get_session()
-    students = session.query(Student).order_by(Student.id).all()
+    students = session.query(Student).all()
+    student_names = [f"{s.first_name} {s.last_name}" for s in students]
     
-    if not students:
-        st.info("No students found in the database")
-        return
-    
-    student_ids = [s.id for s in students]
-    student_id = st.selectbox("Select Student", student_ids, key="interventions_student_select")
-    
-    if student_id:
-        student = session.query(Student).get(student_id)
+    # Student selection
+    selected_student = st.selectbox("Select Student", student_names)
+    if selected_student:
+        student = students[student_names.index(selected_student)]
         
         # Show student info
         st.subheader("Student Information")
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write("Name:", student.name)
-            st.write("Grade:", student.grade)
+            st.write(f"Name: {student.first_name} {student.last_name}")
+            st.write(f"Grade: {student.grade}")
         
         with col2:
             attendance_rate = calculate_attendance_rate(student.id)
@@ -1109,49 +1105,91 @@ def show_interventions():
             elif attendance_rate < 90:
                 st.warning("⚠️ At Risk")
         
-        # Show interventions
-        st.subheader("Intervention History")
-        interventions = student.interventions
+        # Show existing interventions
+        st.subheader("Current Interventions")
+        interventions = session.query(Intervention).filter_by(student_id=student.id).all()
         
-        if interventions:
-            data = [{
-                'Date': i.date,
-                'Type': i.type,
-                'Description': i.description,
-                'Outcome': i.outcome
-            } for i in interventions]
-            
-            df = pd.DataFrame(data)
-            st.dataframe(df)
-        else:
-            st.write("No interventions recorded")
+        for intervention in interventions:
+            with st.expander(f"{intervention.intervention_type} - {'Ongoing' if intervention.is_ongoing else 'Completed'}"):
+                st.write(f"Start Date: {intervention.start_date}")
+                if not intervention.is_ongoing and intervention.end_date:
+                    st.write(f"End Date: {intervention.end_date}")
+                st.write(f"Notes: {intervention.notes}")
         
         # Add new intervention
-        st.subheader("Add Intervention")
+        st.subheader("Add New Intervention")
         with st.form("new_intervention"):
-            intervention_type = st.selectbox(
-                "Type",
-                ["Phone Call", "Meeting", "Letter", "Home Visit", "Other"]
-            )
-            description = st.text_area("Description")
-            outcome = st.text_area("Outcome")
-            submitted = st.form_submit_button("Add Intervention")
+            intervention_type_options = [
+                "Point Person",
+                "Home Visits",
+                "Morning Phone Call",
+                "Buddy System",
+                "Convos with Parents",
+                "Social Worker Weekly Attendance Meeting",
+                "Celebration",
+                "Family Meetings",
+                "Letters",
+                "Incentivizes",
+                "Family trips",
+                "Individual Point Sheets For Attendance",
+                "Attendance Contracts",
+                "Lobby",
+                "Other"
+            ]
             
-            if submitted:
-                from database import Intervention
-                
-                intervention = Intervention(
-                    student=student,
-                    date=datetime.now().date(),
-                    type=intervention_type,
-                    description=description,
-                    outcome=outcome
-                )
-                
-                session.add(intervention)
-                session.commit()
-                st.success("Intervention added successfully!")
-                st.experimental_rerun()
+            selected_type = st.selectbox(
+                "Intervention Type",
+                intervention_type_options
+            )
+            
+            # Show text input for "Other" option
+            final_intervention_type = selected_type
+            if selected_type == "Other":
+                other_type = st.text_input("Please specify the intervention type")
+                if other_type:
+                    final_intervention_type = other_type
+            
+            # Date inputs
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("Start Date", datetime.now())
+            with col2:
+                is_ongoing = st.checkbox("Intervention is ongoing", value=True)
+                if not is_ongoing:
+                    end_date = st.date_input("End Date", datetime.now())
+                else:
+                    end_date = None
+            
+            notes = st.text_area("Notes")
+            
+            if st.form_submit_button("Add Intervention"):
+                try:
+                    # Validate that if "Other" is selected, a custom type was provided
+                    if selected_type == "Other" and not other_type:
+                        st.error("Please specify the intervention type for 'Other'")
+                        return
+                    
+                    # Validate end date is after start date
+                    if end_date and end_date < start_date:
+                        st.error("End date must be after start date")
+                        return
+                    
+                    new_intervention = Intervention(
+                        student_id=student.id,
+                        intervention_type=final_intervention_type,
+                        start_date=start_date,
+                        end_date=end_date,
+                        is_ongoing=is_ongoing,
+                        notes=notes
+                    )
+                    session.add(new_intervention)
+                    session.commit()
+                    st.success("Intervention added successfully!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error adding intervention: {str(e)}")
+                finally:
+                    session.close()
 
 if __name__ == "__main__":
     main()
