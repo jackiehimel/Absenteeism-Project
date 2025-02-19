@@ -1393,10 +1393,134 @@ def show_interventions():
             if interventions:
                 for intervention in interventions:
                     with st.expander(f"{intervention.intervention_type} - {'Ongoing' if intervention.is_ongoing else 'Completed'}"):
-                        st.write(f"Start Date: {intervention.start_date}")
-                        if not intervention.is_ongoing and intervention.end_date:
-                            st.write(f"End Date: {intervention.end_date}")
-                        st.write(f"Notes: {intervention.notes}")
+                        # Create three columns for the intervention details
+                        details_col, edit_col, delete_col = st.columns([3, 1, 1])
+                        
+                        with details_col:
+                            # Show current details
+                            st.write(f"Start Date: {intervention.start_date}")
+                            if not intervention.is_ongoing and intervention.end_date:
+                                st.write(f"End Date: {intervention.end_date}")
+                            st.write(f"Notes: {intervention.notes}")
+                        
+                        with edit_col:
+                            if st.button("✏️ Edit", key=f"edit_{intervention.id}"):
+                                # Store intervention ID in session state for editing
+                                st.session_state["editing_intervention_id"] = intervention.id
+                                st.session_state["editing_intervention_type"] = intervention.intervention_type
+                                st.session_state["editing_intervention_start_date"] = intervention.start_date
+                                st.session_state["editing_intervention_end_date"] = intervention.end_date
+                                st.session_state["editing_intervention_is_ongoing"] = intervention.is_ongoing
+                                st.session_state["editing_intervention_notes"] = intervention.notes
+                                st.rerun()
+                        
+                        with delete_col:
+                            if st.button("🗑️ Delete", key=f"delete_{intervention.id}"):
+                                try:
+                                    # Delete the intervention
+                                    session.query(Intervention).filter_by(id=intervention.id).delete()
+                                    session.commit()
+                                    st.success("Intervention deleted successfully!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error deleting intervention: {str(e)}")
+                                    session.rollback()
+                
+                # Show edit form if an intervention is being edited
+                if "editing_intervention_id" in st.session_state:
+                    st.markdown("### Edit Intervention")
+                    with st.form(key="edit_intervention_form"):
+                        # Intervention type selection
+                        edited_type = st.radio(
+                            "Intervention Type",
+                            options=intervention_types,
+                            key="edit_intervention_type",
+                            index=intervention_types.index(st.session_state["editing_intervention_type"]) \
+                                if st.session_state["editing_intervention_type"] in intervention_types else -1
+                        )
+                        
+                        # Handle "Other" option
+                        final_edited_type = edited_type
+                        if edited_type == "Other":
+                            other_type = st.text_input(
+                                "Please specify the intervention type",
+                                value=st.session_state["editing_intervention_type"] \
+                                    if st.session_state["editing_intervention_type"] not in intervention_types else "",
+                                key="edit_intervention_other_type"
+                            )
+                            if other_type:
+                                final_edited_type = other_type
+                        
+                        # Ongoing status
+                        is_ongoing_edit = st.checkbox(
+                            "This is an ongoing intervention",
+                            value=st.session_state["editing_intervention_is_ongoing"],
+                            key="edit_intervention_ongoing"
+                        )
+                        
+                        # Start date
+                        start_date_edit = st.date_input(
+                            "Start Date",
+                            value=st.session_state["editing_intervention_start_date"],
+                            key="edit_intervention_start_date"
+                        )
+                        
+                        # End date (shown if not ongoing)
+                        end_date_edit = None
+                        if not is_ongoing_edit:
+                            end_date_edit = st.date_input(
+                                "End Date",
+                                value=st.session_state["editing_intervention_end_date"] or datetime.now(),
+                                min_value=start_date_edit,
+                                key="edit_intervention_end_date"
+                            )
+                        
+                        # Notes field
+                        notes_edit = st.text_area(
+                            "Notes",
+                            value=st.session_state["editing_intervention_notes"] or "",
+                            key="edit_intervention_notes"
+                        )
+                        
+                        # Submit buttons
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("Save Changes"):
+                                try:
+                                    # Update the intervention
+                                    intervention = session.query(Intervention).get(st.session_state["editing_intervention_id"])
+                                    intervention.intervention_type = final_edited_type
+                                    intervention.start_date = start_date_edit
+                                    intervention.end_date = end_date_edit if not is_ongoing_edit else None
+                                    intervention.is_ongoing = is_ongoing_edit
+                                    intervention.notes = notes_edit
+                                    
+                                    session.commit()
+                                    st.success("Intervention updated successfully!")
+                                    
+                                    # Clear editing state
+                                    del st.session_state["editing_intervention_id"]
+                                    del st.session_state["editing_intervention_type"]
+                                    del st.session_state["editing_intervention_start_date"]
+                                    del st.session_state["editing_intervention_end_date"]
+                                    del st.session_state["editing_intervention_is_ongoing"]
+                                    del st.session_state["editing_intervention_notes"]
+                                    
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error updating intervention: {str(e)}")
+                                    session.rollback()
+                        
+                        with col2:
+                            if st.form_submit_button("Cancel"):
+                                # Clear editing state
+                                del st.session_state["editing_intervention_id"]
+                                del st.session_state["editing_intervention_type"]
+                                del st.session_state["editing_intervention_start_date"]
+                                del st.session_state["editing_intervention_end_date"]
+                                del st.session_state["editing_intervention_is_ongoing"]
+                                del st.session_state["editing_intervention_notes"]
+                                st.rerun()
             else:
                 st.info("No interventions recorded yet")
 
