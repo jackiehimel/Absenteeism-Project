@@ -1291,15 +1291,7 @@ def show_interventions():
             # Create a list of all options for the radio button
             intervention_type_options = [opt for opts in intervention_categories.values() for opt in opts]
             
-            # Show categories as headers above related options
-            for category, options in intervention_categories.items():
-                st.markdown(f"<small>{category}</small>", unsafe_allow_html=True)
-                for option in options:
-                    if option == selected_type:
-                        st.markdown(f"<div style='margin-left: 1rem; color: #2563eb;'>▸ {option}</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div style='margin-left: 1rem; color: #666;'>• {option}</div>", unsafe_allow_html=True)
-            
+            # Select intervention type
             selected_type = st.radio(
                 "Choose an intervention type",
                 options=intervention_type_options,
@@ -1307,6 +1299,15 @@ def show_interventions():
                 horizontal=True,
                 key="intervention_type"
             )
+            
+            # Show categories with selected highlighting
+            for category, options in intervention_categories.items():
+                st.markdown(f"<small>{category}</small>", unsafe_allow_html=True)
+                for option in options:
+                    if option == selected_type:
+                        st.markdown(f"<div style='margin-left: 1rem; color: #2563eb;'>▸ {option}</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div style='margin-left: 1rem; color: #666;'>• {option}</div>", unsafe_allow_html=True)
             
             # Handle "Other" option
             final_intervention_type = selected_type
@@ -1318,6 +1319,37 @@ def show_interventions():
                 )
                 if other_type:
                     final_intervention_type = other_type
+                    
+            # Add submit button
+            submitted = st.form_submit_button("Add Intervention")
+            
+            if submitted:
+                try:
+                    # Validate that if "Other" is selected, a custom type was provided
+                    if selected_type == "Other" and not other_type:
+                        st.error("Please specify the intervention type for 'Other'")
+                        return
+                    
+                    # Add intervention to database
+                    new_intervention = Intervention(
+                        student_id=student.id,
+                        intervention_type=final_intervention_type,
+                        start_date=start_date,
+                        end_date=end_date if not is_ongoing else None,
+                        is_ongoing=is_ongoing,
+                        notes=notes if notes else None
+                    )
+                    
+                    session.add(new_intervention)
+                    session.commit()
+                    st.success("Intervention added successfully!")
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"Error adding intervention: {str(e)}")
+                    session.rollback()
+                finally:
+                    session.close()
                     
             # Start date
             start_date = st.date_input(
