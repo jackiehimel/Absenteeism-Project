@@ -203,8 +203,12 @@ def get_attendance_trends(grade=None, start_date=None, end_date=None, interval='
     
     return df
 
-def get_tiered_attendance(grade=None):
+def get_tiered_attendance(grade=None, school_year=None):
     """Get students grouped by attendance tiers.
+    
+    Args:
+        grade: Optional grade level to filter by
+        school_year: Optional school year to filter by
     
     Returns:
         dict: Dictionary with keys 'tier3' (chronic), 'tier2' (at risk), 'tier1' (warning), 'on_track'
@@ -212,11 +216,17 @@ def get_tiered_attendance(grade=None):
     """
     session = get_session()
     
-    # Base query to get latest attendance record for each student
+    # Base query to get latest attendance record for each student within the school year
     subquery = session.query(
         AttendanceRecord.student_id,
         func.max(AttendanceRecord.date).label('max_date')
-    ).group_by(AttendanceRecord.student_id).subquery()
+    )
+    
+    # Apply school year filter to subquery if specified
+    if school_year is not None:
+        subquery = subquery.filter(AttendanceRecord.school_year == school_year)
+    
+    subquery = subquery.group_by(AttendanceRecord.student_id).subquery()
     
     # Get the full records that match the latest dates
     query = session.query(
@@ -233,6 +243,10 @@ def get_tiered_attendance(grade=None):
     # Apply grade filter if specified
     if grade is not None:
         query = query.filter(Student.grade == grade)
+    
+    # Apply school year filter to main query if specified
+    if school_year is not None:
+        query = query.filter(AttendanceRecord.school_year == school_year)
     
     results = query.all()
     

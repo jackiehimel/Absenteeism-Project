@@ -904,7 +904,7 @@ def show_chronic_absenteeism():
         )
     
     # Get tiered attendance data
-    tiers = get_tiered_attendance(grade=grade)
+    tiers = get_tiered_attendance(grade=grade, school_year=selected_year)
     
     # Calculate total students and check if we have data
     total_students = sum(len(tier) for tier in tiers.values())
