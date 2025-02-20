@@ -484,7 +484,12 @@ def show_dashboard():
             "Time Interval",
             ["Daily", "Weekly", "Monthly", "Yearly"],
             index=2,  # Default to Monthly
-            key="interval"
+            key="interval",
+            help="Select the time interval for attendance data aggregation"
+        )
+        st.markdown(
+            f"<p style='margin-top: -1em; font-size: 0.9em; color: #666;'>Selected: {interval}</p>",
+            unsafe_allow_html=True
         )
     
     # Get available grades
@@ -879,12 +884,24 @@ def show_chronic_absenteeism():
         st.warning("No student data available in the database")
         return
     
-    # Grade selector with only available grades
-    grade = st.selectbox(
-        "Select Grade", 
-        [None] + available_grades, 
-        format_func=lambda x: 'All Grades' if x is None else f'Grade {x}'
-    )
+    # Get available school years from attendance records
+    available_years = [year[0] for year in session.query(AttendanceRecord.school_year).distinct().order_by(AttendanceRecord.school_year.desc())]
+    
+    # Year and grade selectors
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_year = st.selectbox(
+            "Select School Year",
+            available_years,
+            format_func=lambda x: f'{x}-{x+1}'
+        )
+    
+    with col2:
+        grade = st.selectbox(
+            "Select Grade", 
+            [None] + available_grades, 
+            format_func=lambda x: 'All Grades' if x is None else f'Grade {x}'
+        )
     
     # Get tiered attendance data
     tiers = get_tiered_attendance(grade=grade)
@@ -1124,7 +1141,13 @@ def show_demographics():
                 'grade': student.grade,
                 'gender': student.gender or 'Not Specified',
                 'race': student.race or 'Not Specified',
-                'attendance_rate': latest_record.present_percentage
+                'attendance_rate': latest_record.present_percentage,
+                'honor_roll': student.honor_roll,
+                'housing_status': student.housing_status or 'Not Specified',
+                'sports_participation': student.sports_participation,
+                'behavioral_concerns': student.behavioral_concerns,
+                'myschool_reports_count': student.myschool_reports_count,
+                'caregiver_involvement': student.caregiver_involvement or 'Not Specified'
             })
     
     if not data:
@@ -1301,6 +1324,109 @@ def show_demographics():
         
         st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Additional Demographics
+    st.subheader("Additional Demographics")
+    
+    # First row: Academic and Sports
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Honor Roll Status
+        honor_roll_data = df[df['honor_roll'].notna()]
+        if not honor_roll_data.empty:
+            st.markdown("##### Honor Roll Status")
+            honor_roll_counts = honor_roll_data['honor_roll'].value_counts()
+            fig = px.pie(
+                values=honor_roll_counts.values,
+                names=['Honor Roll', 'Not Honor Roll'],
+                title='Honor Roll Distribution',
+                color_discrete_sequence=['#22c55e', '#94a3b8']
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Sports Participation
+        sports_data = df[df['sports_participation'].notna()]
+        if not sports_data.empty:
+            st.markdown("##### Sports Participation")
+            sports_counts = sports_data['sports_participation'].value_counts()
+            fig = px.pie(
+                values=sports_counts.values,
+                names=['Participating', 'Not Participating'],
+                title='Sports Participation',
+                color_discrete_sequence=['#3b82f6', '#94a3b8']
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Second row: Housing and Behavioral
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Housing Status
+        housing_data = df[df['housing_status'].notna()]
+        if not housing_data.empty:
+            st.markdown("##### Housing Status")
+            housing_counts = housing_data['housing_status'].value_counts()
+            fig = px.bar(
+                x=housing_counts.index,
+                y=housing_counts.values,
+                title='Housing Status Distribution',
+                color_discrete_sequence=['#3b82f6']
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Behavioral Concerns
+        behavior_data = df[df['behavioral_concerns'].notna()]
+        if not behavior_data.empty:
+            st.markdown("##### Behavioral Concerns")
+            behavior_counts = behavior_data['behavioral_concerns'].value_counts()
+            fig = px.pie(
+                values=behavior_counts.values,
+                names=['Has Concerns', 'No Concerns'],
+                title='Behavioral Concerns Distribution',
+                color_discrete_sequence=['#ef4444', '#22c55e']
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Third row: MySchool Reports and Caregiver Involvement
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # MySchool Reports
+        reports_data = df[df['myschool_reports_count'].notna()]
+        if not reports_data.empty:
+            st.markdown("##### MySchool Reports")
+            avg_reports = reports_data['myschool_reports_count'].mean()
+            st.metric(
+                "Average MySchool Reports",
+                f"{avg_reports:.1f}",
+                help="Average number of MySchool reports per student"
+            )
+            
+            # Distribution of reports
+            fig = px.histogram(
+                reports_data,
+                x='myschool_reports_count',
+                title='Distribution of MySchool Reports',
+                color_discrete_sequence=['#3b82f6']
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Caregiver Involvement
+        caregiver_data = df[df['caregiver_involvement'].notna()]
+        if not caregiver_data.empty:
+            st.markdown("##### Caregiver Involvement")
+            caregiver_counts = caregiver_data['caregiver_involvement'].value_counts()
+            fig = px.pie(
+                values=caregiver_counts.values,
+                names=caregiver_counts.index,
+                title='Caregiver Involvement Levels',
+                color_discrete_sequence=px.colors.qualitative.Set3
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 def show_interventions():
     st.header("Student Interventions")
