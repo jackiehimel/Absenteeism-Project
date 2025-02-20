@@ -202,3 +202,64 @@ def get_attendance_trends(grade=None, start_date=None, end_date=None, interval='
     df = df.rename(columns={'date': 'period'})
     
     return df
+
+def get_tiered_attendance(grade=None):
+    """Get students grouped by attendance tiers.
+    
+    Returns:
+        dict: Dictionary with keys 'tier3' (chronic), 'tier2' (at risk), 'tier1' (warning), 'on_track'
+              Each containing a list of dicts with student info and attendance data
+    """
+    session = get_session()
+    
+    # Base query to get latest attendance record for each student
+    subquery = session.query(
+        AttendanceRecord.student_id,
+        func.max(AttendanceRecord.date).label('max_date')
+    ).group_by(AttendanceRecord.student_id).subquery()
+    
+    # Get the full records that match the latest dates
+    query = session.query(
+        Student,
+        AttendanceRecord
+    ).join(
+        AttendanceRecord
+    ).join(
+        subquery,
+        (AttendanceRecord.student_id == subquery.c.student_id) &
+        (AttendanceRecord.date == subquery.c.max_date)
+    )
+    
+    # Apply grade filter if specified
+    if grade is not None:
+        query = query.filter(Student.grade == grade)
+    
+    results = query.all()
+    
+    # Initialize tiers
+    tiers = {
+        'tier3': [],  # Chronic: < 80%
+        'tier2': [],  # At Risk: 80-84.99%
+        'tier1': [],  # Warning: 85-89.99%
+        'on_track': [] # On Track: >= 90%
+    }
+    
+    # Categorize students into tiers
+    for student, record in results:
+        attendance_rate = record.present_percentage
+        student_info = {
+            'student': student,
+            'attendance_rate': attendance_rate,
+            'last_updated': record.date
+        }
+        
+        if attendance_rate < 80:
+            tiers['tier3'].append(student_info)
+        elif attendance_rate < 85:
+            tiers['tier2'].append(student_info)
+        elif attendance_rate < 90:
+            tiers['tier1'].append(student_info)
+        else:
+            tiers['on_track'].append(student_info)
+    
+    return tiers
