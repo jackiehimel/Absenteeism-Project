@@ -892,8 +892,8 @@ def show_chronic_absenteeism():
     with col1:
         selected_year = st.selectbox(
             "Select School Year",
-            available_years,
-            format_func=lambda x: f'{x}-{x+1}'
+            available_years if available_years else [None],
+            format_func=lambda x: 'All Years' if x is None else f'{x}-{x+1}'
         )
     
     with col2:
@@ -1339,7 +1339,7 @@ def show_demographics():
             honor_roll_counts = honor_roll_data['honor_roll'].value_counts()
             fig = px.pie(
                 values=honor_roll_counts.values,
-                names=['Honor Roll', 'Not Honor Roll'],
+                names=honor_roll_counts.index.map({True: 'Honor Roll', False: 'Not Honor Roll'}),
                 title='Honor Roll Distribution',
                 color_discrete_sequence=['#22c55e', '#94a3b8']
             )
@@ -1353,7 +1353,7 @@ def show_demographics():
             sports_counts = sports_data['sports_participation'].value_counts()
             fig = px.pie(
                 values=sports_counts.values,
-                names=['Participating', 'Not Participating'],
+                names=sports_counts.index.map({True: 'Participating', False: 'Not Participating'}),
                 title='Sports Participation',
                 color_discrete_sequence=['#3b82f6', '#94a3b8']
             )
@@ -1384,7 +1384,7 @@ def show_demographics():
             behavior_counts = behavior_data['behavioral_concerns'].value_counts()
             fig = px.pie(
                 values=behavior_counts.values,
-                names=['Has Concerns', 'No Concerns'],
+                names=behavior_counts.index.map({True: 'Has Concerns', False: 'No Concerns'}),
                 title='Behavioral Concerns Distribution',
                 color_discrete_sequence=['#ef4444', '#22c55e']
             )
