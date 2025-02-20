@@ -20,7 +20,7 @@ def calculate_attendance_rate(student_id, start_date=None, end_date=None):
     
     return record.present_percentage
 
-def get_tiered_attendance(grade=None):
+def get_tiered_attendance(grade=None, school_year=None):
     """Get students grouped by attendance tiers
     Tier 3: Missing 20% or more (Chronic)
     Tier 2: Missing 15-19.99%
@@ -29,12 +29,18 @@ def get_tiered_attendance(grade=None):
     """
     session = get_session()
     
-    # Get the most recent attendance record for each student
+    # Get the most recent attendance record for each student within the school year
     subquery = session.query(
         AttendanceRecord.student_id,
         AttendanceRecord.present_percentage.label('attendance_rate'),
         AttendanceRecord.date.label('record_date')
-    ).order_by(
+    )
+    
+    # Apply school year filter if specified
+    if school_year is not None:
+        subquery = subquery.filter(AttendanceRecord.school_year == school_year)
+    
+    subquery = subquery.order_by(
         AttendanceRecord.student_id,
         AttendanceRecord.date.desc()
     ).distinct(AttendanceRecord.student_id).subquery()

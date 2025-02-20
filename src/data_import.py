@@ -155,7 +155,8 @@ def import_excel_data(file_path):
                             present_days=present_days,
                             absent_days=absent_days,
                             present_percentage=present_pct,
-                            absent_percentage=absent_pct
+                            absent_percentage=absent_pct,
+                            school_year=start_date.year if start_date.month >= 7 else start_date.year - 1  # School year starts in July/August
                         )
                         session.add(attendance)
                         records_added += 1

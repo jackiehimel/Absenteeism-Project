@@ -9,6 +9,7 @@ from database import Student, AttendanceRecord, Intervention, get_session
 from analysis import get_attendance_trends, get_tiered_attendance, calculate_attendance_rate, analyze_absence_patterns
 from sqlalchemy import func
 
+
 def main():
     import os  # Add this at the top
     
@@ -875,7 +876,8 @@ def show_student_details():
 
 def show_chronic_absenteeism():
     st.header("Chronic Absenteeism")
-    
+
+
     # Get available grades from the database
     session = get_session()
     available_grades = [grade[0] for grade in session.query(Student.grade).distinct().order_by(Student.grade)]
@@ -890,17 +892,29 @@ def show_chronic_absenteeism():
     # Year and grade selectors
     col1, col2 = st.columns(2)
     with col1:
+        st.markdown("""
+        <style>
+        div[data-baseweb='select'] > div {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-height: 40px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
         selected_year = st.selectbox(
             "Select School Year",
             available_years if available_years else [None],
-            format_func=lambda x: 'All Years' if x is None else f'{x}-{x+1}'
+            format_func=lambda x: 'All Years' if x is None else f'{x}-{x+1}',
+            key='year_select'
         )
     
     with col2:
         grade = st.selectbox(
             "Select Grade", 
             [None] + available_grades, 
-            format_func=lambda x: 'All Grades' if x is None else f'Grade {x}'
+            format_func=lambda x: 'All Grades' if x is None else f'Grade {x}',
+            key='grade_select'
         )
     
     # Get tiered attendance data
