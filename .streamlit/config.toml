@@ -1,24 +1,9 @@
 [theme]
-primaryColor = "#FF4B4B"
+primaryColor = "#1E88E5"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
+secondaryBackgroundColor = "#F8F9FA"
+textColor = "#31333F"
 font = "sans serif"
-
-[ui]
-height = 600
-width = 800
-
-[ui.select]
-height = 40
-width = 200
-fontSize = 16
-backgroundColor = "#FFFFFF"
-textColor = "#262730"
-borderColor = "#E0E0E0"
-borderWidth = 1
-borderRadius = 4
-padding = 8
 
 [browser]
 gatherUsageStats = false

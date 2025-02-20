@@ -889,33 +889,34 @@ def show_chronic_absenteeism():
     # Get available school years from attendance records
     available_years = [year[0] for year in session.query(AttendanceRecord.school_year).distinct().order_by(AttendanceRecord.school_year.desc())]
     
-    # Year and grade selectors
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        <style>
-        div[data-baseweb='select'] > div {
-            background-color: white;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            min-height: 40px;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        selected_year = st.selectbox(
+    # Create a container for the filters
+    filter_container = st.container()
+    with filter_container:
+        # Year selector
+        st.write("### School Year")
+        year_options = ['All Years'] + [f'{year}-{year+1}' for year in available_years if year is not None]
+        year_index = st.radio(
             "Select School Year",
-            available_years if available_years else [None],
-            format_func=lambda x: 'All Years' if x is None else f'{x}-{x+1}',
-            key='year_select'
+            options=year_options,
+            key='year_radio',
+            label_visibility='collapsed',
+            horizontal=True
         )
-    
-    with col2:
-        grade = st.selectbox(
-            "Select Grade", 
-            [None] + available_grades, 
-            format_func=lambda x: 'All Grades' if x is None else f'Grade {x}',
-            key='grade_select'
+        selected_year = None if year_index == 'All Years' else int(year_index.split('-')[0])
+        
+        st.write("")
+        
+        # Grade selector
+        st.write("### Grade Level")
+        grade_options = ['All Grades'] + [f'Grade {g}' for g in available_grades if g is not None]
+        grade_index = st.radio(
+            "Select Grade",
+            options=grade_options,
+            key='grade_radio',
+            label_visibility='collapsed',
+            horizontal=True
         )
+        grade = None if grade_index == 'All Grades' else int(grade_index.split(' ')[1])
     
     # Get tiered attendance data
     tiers = get_tiered_attendance(grade=grade, school_year=selected_year)
