@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Fore
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 import pandas as pd
+from sqlalchemy import extract
 
 Base = declarative_base()
 
@@ -65,6 +66,7 @@ def get_session():
 
 def get_attendance_trends(grade=None, start_date=None, end_date=None, interval='monthly'):
     """Get attendance trends with support for different time intervals"""
+    print(f"Getting attendance trends with interval: {interval}")
     session = get_session()
     
     # Base query
@@ -100,22 +102,80 @@ def get_attendance_trends(grade=None, start_date=None, end_date=None, interval='
     # Calculate attendance rate
     df['attendance_rate'] = (df['present_days'] / df['total_days'] * 100).round(1)
     
+    # Handle all dates having the same month and day, just different years
+    # This is our September 1st every year edge case
+    if len(df) > 1 and interval.lower() == 'yearly':
+        # Extract all years
+        years = list(df.index.year)
+        print(f"All years in data: {years}")
+        
+        # Create a clean yearly dataframe
+        data = []
+        for year in sorted(years):
+            year_data = df[df.index.year == year]
+            if not year_data.empty:
+                # Calculate yearly attendance and count
+                yearly_present = year_data['present_days'].sum()
+                yearly_total = year_data['total_days'].sum()
+                yearly_rate = (yearly_present / yearly_total * 100).round(1) if yearly_total > 0 else 0
+                
+                data.append({
+                    'period': pd.Timestamp(f"{year}-01-01"),
+                    'present_days': yearly_present,
+                    'total_days': yearly_total,
+                    'attendance_rate': yearly_rate,
+                    'student_count': len(year_data)
+                })
+        
+        if data:
+            print(f"Created yearly data: {data}")
+            return pd.DataFrame(data)
+    
+    # Debug information
+    print(f"Input data: {df.to_dict('records')}")
+    
     # Resample based on interval
     df.set_index('date', inplace=True)
     
+    # Count students per date before resampling (assumes each date has 1 record per student)
+    # Since we've grouped by date, we need to estimate the student count
+    student_counts = pd.Series(1, index=df.index)
+    
     if interval == 'daily':
-        pass  # Keep daily data as is
+        # Add student count column - daily data is already as is
+        df['student_count'] = student_counts.values
     elif interval == 'weekly':
         df = df.resample('W').agg({
             'present_days': 'sum',
             'total_days': 'sum'
         })
     elif interval == 'monthly':
-        df = df.resample('M').agg({
-            'present_days': 'sum',
-            'total_days': 'sum'
-        })
+        # Check if all dates are on the same day of different months/years
+        if df.index.is_monotonic and len(df) > 1 and all(d.day == df.index[0].day for d in df.index):
+            # Don't resample, just use the original data
+            df['month_year'] = df.index.to_series().apply(lambda x: f"{x.month}-{x.year}")
+            # Count number of students per date
+            student_count_query = session.query(
+                AttendanceRecord.date,
+                func.count(AttendanceRecord.student_id.distinct()).label('student_count')
+            )
+            if grade is not None:
+                student_count_query = student_count_query.join(Student).filter(Student.grade == grade)
+            student_count_query = student_count_query.group_by(AttendanceRecord.date)
+            student_counts = {r.date: r.student_count for r in student_count_query.all()}
+            # Add student count to dataframe
+            df['student_count'] = df.index.map(lambda x: student_counts.get(x, 0))
+            df = df.reset_index()
+            df = df.rename(columns={'date': 'period'})
+            return df
+        else:
+            # Regular monthly resampling
+            df = df.resample('M').agg({
+                'present_days': 'sum',
+                'total_days': 'sum'
+            })
     elif interval == 'yearly':
+        # Regular yearly resampling
         df = df.resample('Y').agg({
             'present_days': 'sum',
             'total_days': 'sum'
@@ -123,10 +183,73 @@ def get_attendance_trends(grade=None, start_date=None, end_date=None, interval='
     
     # Recalculate attendance rate after resampling
     df['attendance_rate'] = (df['present_days'] / df['total_days'] * 100).round(1)
+    
+    # Add student count column if not already present
+    if 'student_count' not in df.columns:
+        # Estimate student count as 1 per period after resampling
+        df['student_count'] = 1
+    
     df = df.reset_index()
     df = df.rename(columns={'date': 'period'})
     
+    print(f"Final output data: {df.to_dict('records')}")
     return df
+
+def get_attendance_trend_data(grade=None):
+    """Directly query the database to get attendance trends by year
+    Returns manually structured data with one point per year"""
+    print("Using get_attendance_trend_data function to get yearly data")
+    
+    session = get_session()
+    
+    # Find all distinct academic years with attendance records
+    years_query = session.query(extract('year', AttendanceRecord.date).distinct()).order_by(extract('year', AttendanceRecord.date))
+    years = [int(year[0]) for year in years_query.all()]  # Ensure years are integers
+    
+    print(f"Years found: {years}")
+    
+    if not years:
+        return pd.DataFrame()
+    
+    # Initialize data list
+    data = []
+    
+    # For each year, get the aggregate attendance data
+    for year in years:
+        query = session.query(
+            func.sum(AttendanceRecord.present_days).label('present_days'),
+            func.sum(AttendanceRecord.total_days).label('total_days'),
+            func.count(Student.id.distinct()).label('student_count')
+        ).join(Student)
+        
+        # Filter by year and grade if specified
+        query = query.filter(extract('year', AttendanceRecord.date) == year)
+        if grade is not None:
+            query = query.filter(Student.grade == grade)
+        
+        result = query.one()
+        
+        # Calculate attendance rate
+        present_days = result.present_days or 0
+        total_days = result.total_days or 0
+        student_count = result.student_count or 0
+        
+        if total_days > 0:
+            attendance_rate = (present_days / total_days * 100).round(1)
+        else:
+            attendance_rate = 0
+        
+        # Add to data list
+        data.append({
+            'period': pd.Timestamp(year=year, month=1, day=1),  # January 1st of the year
+            'present_days': present_days,
+            'total_days': total_days,
+            'attendance_rate': attendance_rate,
+            'student_count': student_count
+        })
+    
+    print(f"Yearly data created: {data}")
+    return pd.DataFrame(data)
 
 def get_tiered_attendance(grade=None, school_year=None):
     """Get students grouped by attendance tiers.

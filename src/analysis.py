@@ -84,6 +84,9 @@ def get_tiered_attendance(grade=None, school_year=None):
     return tiers
 
 def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date=None, interval='monthly'):
+    """Analyze attendance trends with flexible time intervals
+    interval: 'daily', 'weekly', 'monthly', 'quarterly', or 'yearly'
+    """
     # If no end_date is provided, use today
     if not end_date:
         end_date = datetime.now().date()
@@ -91,44 +94,36 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
     # If no start_date is provided, default to 6 months before end_date
     if not start_date:
         start_date = (end_date - timedelta(days=180))
-    """Analyze attendance trends with flexible time intervals
-    interval: 'daily', 'weekly', 'monthly', or 'yearly'
-    """
+    
     session = get_session()
-    query = session.query(AttendanceRecord)
     
-    try:
-        if student_id:
-            query = query.filter(AttendanceRecord.student_id == student_id)
-        
-        if grade is not None:  # Allow grade 0
-            # Ensure grade is an integer
-            grade = int(grade)
-            query = query.join(Student).filter(Student.grade == grade)
-        
-        if start_date:
-            # Ensure start_date is a date object
-            if isinstance(start_date, datetime):
-                start_date = start_date.date()
-            query = query.filter(AttendanceRecord.date >= start_date)
-        
-        if end_date:
-            # Ensure end_date is a date object
-            if isinstance(end_date, datetime):
-                end_date = end_date.date()
-            query = query.filter(AttendanceRecord.date <= end_date)
-    except (ValueError, TypeError) as e:
-        raise ValueError(f"Invalid parameter values: {str(e)}")
+    # Get all attendance records within date range
+    query = session.query(
+        AttendanceRecord.date, 
+        AttendanceRecord.present_percentage,
+        AttendanceRecord.student_id
+    )
     
-    records = query.order_by(AttendanceRecord.date).all()
+    # Apply filters
+    if student_id:
+        query = query.filter(AttendanceRecord.student_id == student_id)
+    
+    if grade is not None:  # Allow grade 0
+        query = query.join(Student).filter(Student.grade == grade)
+    
+    if start_date:
+        query = query.filter(AttendanceRecord.date >= start_date)
+    
+    if end_date:
+        query = query.filter(AttendanceRecord.date <= end_date)
+    
+    # Execute query and get results
+    records = query.all()
     
     if not records:
         return pd.DataFrame(columns=['period', 'attendance_rate'])
     
-    if not records:
-        return pd.DataFrame(columns=['period', 'attendance_rate'])
-
-    # Convert records to DataFrame with proper datetime conversion
+    # Convert to DataFrame for easier manipulation
     df = pd.DataFrame([
         {
             'date': record.date,
@@ -140,34 +135,42 @@ def get_attendance_trends(student_id=None, grade=None, start_date=None, end_date
     # Ensure date column is datetime
     df['date'] = pd.to_datetime(df['date'])
     
-    # Group by time interval and calculate average attendance rate
+    # Create period column based on selected interval
     if interval == 'daily':
         df['period'] = df['date']
     elif interval == 'weekly':
+        # Start of week (Monday)
         df['period'] = df['date'] - pd.to_timedelta(df['date'].dt.dayofweek, unit='D')
     elif interval == 'monthly':
-        df['period'] = df['date'].dt.to_period('M').dt.to_timestamp()
-    else:  # yearly
-        df['period'] = df.apply(
-            lambda x: datetime(x['date'].year if x['date'].month >= 9 else x['date'].year - 1, 9, 1),
+        # Start of month
+        df['period'] = df['date'].dt.strftime('%Y-%m-01')
+        df['period'] = pd.to_datetime(df['period'])
+    elif interval == 'quarterly':
+        # Start of quarter
+        df['quarter'] = df['date'].dt.quarter
+        df['year'] = df['date'].dt.year
+        df['period'] = pd.to_datetime(df.apply(
+            lambda x: f"{x['year']}-{(x['quarter']-1)*3+1:02d}-01", 
             axis=1
-        )
+        ))
+    else:  # yearly or default
+        # Academic year (starting in September)
+        df['period'] = pd.to_datetime(df.apply(
+            lambda x: f"{x['date'].year if x['date'].month >= 9 else x['date'].year-1}-09-01",
+            axis=1
+        ))
     
-    # Calculate average attendance rate for each period
-    result = df.groupby('period').agg(
-        attendance_rate=('present_percentage', 'mean'),
-        student_count=('student_id', 'nunique'),
-        record_count=('present_percentage', 'count')
-    ).reset_index()
+    # Group by period and calculate average attendance rate
+    result = df.groupby('period').agg({
+        'present_percentage': 'mean',
+        'student_id': 'nunique'
+    }).reset_index()
     
-    # Only include periods that have actual data
-    result = result[result['record_count'] > 0]
+    # Rename columns for clarity
+    result.columns = ['period', 'attendance_rate', 'student_count']
     
-    # Sort by period and select final columns
-    result = result[['period', 'attendance_rate']].sort_values('period')
-    
-    # Sort by period and select final columns
-    result = result[['period', 'attendance_rate']].sort_values('period')
+    # Sort by period
+    result = result.sort_values('period')
     
     return result
 
@@ -185,42 +188,22 @@ def analyze_absence_patterns(grade=None):
     records = query.all()
     
     if not records:
-        return None
+        return pd.DataFrame()  # Return empty DataFrame instead of None
     
     # Convert records to DataFrame
     df = pd.DataFrame(records, columns=['date', 'absent_percentage'])
     
-    # Convert date string to datetime and extract day of week
+    # Convert date string to datetime and extract day of week and month
     df['date'] = pd.to_datetime(df['date'])
-    df['day_of_week'] = df['date'].dt.day_name()
+    df['day_of_week'] = df['date'].dt.weekday  # 0=Monday, 6=Sunday
+    df['month'] = df['date'].dt.month  # 1=January, 12=December
     
-    # Define weekday order and filter out weekends
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    df = df[df['day_of_week'].isin(day_order)]
-    
-    # Calculate average absence rate for each day
-    day_patterns = df.groupby('day_of_week')['absent_percentage'].mean()
-    
-    # Sort by our custom order
-    day_patterns = day_patterns.reindex(day_order)
-    
-    # For debugging
-    print("Records per day:")
-    print(df.groupby('day_of_week').size())
-    print("\nAbsence rates:")
-    print(day_patterns)
-    
-    patterns = {
-        'day_of_week': day_patterns
-    }
-    
-    return patterns
-
-
+    return df  # Return the dataframe directly
 
 def get_demographic_analysis(grade=None):
     """Analyze attendance patterns by demographics"""
     session = get_session()
+    
     students = session.query(Student)
     
     if grade:
@@ -231,27 +214,76 @@ def get_demographic_analysis(grade=None):
         attendance_rate = calculate_attendance_rate(student.id)
         demographic_data.append({
             'grade': student.grade,
-            'gender': student.gender,
-            'race': student.race,
+            'gender': student.gender or 'Unknown',
+            'race': student.race or 'Unknown',
+            'welfare_status': student.welfare_status or 'Unknown',
+            'nyf_status': student.nyf_status or 'Unknown',
+            'behavioral_concerns': 'Yes' if student.behavioral_concerns else 'No',
             'attendance_rate': attendance_rate
         })
     
     if not demographic_data:
         return {
-            'by_grade': pd.Series(dtype='float64'),
-            'by_gender': pd.Series(dtype='float64'),
-            'by_race': pd.Series(dtype='float64')
+            'gender': pd.DataFrame(),
+            'race': pd.DataFrame(),
+            'welfare_status': pd.DataFrame(),
+            'nyf_status': pd.DataFrame(),
+            'behavioral_concerns': pd.DataFrame()
         }
     
     df = pd.DataFrame(demographic_data)
     
     # Analysis by various demographic factors
-    analysis = {}
+    result = {}
     
-    if not grade:  # Only show grade analysis if not filtered by grade
-        analysis['by_grade'] = df.groupby('grade')['attendance_rate'].mean()
+    # Gender analysis
+    if 'gender' in df.columns:
+        gender_df = df.groupby('gender').agg({
+            'attendance_rate': 'mean',
+            'gender': 'count'
+        }).rename(columns={'gender': 'student_count'}).reset_index()
+        result['gender'] = gender_df
+    else:
+        result['gender'] = pd.DataFrame()
     
-    analysis['by_gender'] = df.groupby('gender')['attendance_rate'].mean() if 'gender' in df.columns else pd.Series(dtype='float64')
-    analysis['by_race'] = df.groupby('race')['attendance_rate'].mean() if 'race' in df.columns else pd.Series(dtype='float64')
+    # Race analysis
+    if 'race' in df.columns:
+        race_df = df.groupby('race').agg({
+            'attendance_rate': 'mean',
+            'race': 'count'
+        }).rename(columns={'race': 'student_count'}).reset_index()
+        result['race'] = race_df
+    else:
+        result['race'] = pd.DataFrame()
     
-    return analysis
+    # Welfare status analysis
+    if 'welfare_status' in df.columns:
+        welfare_df = df.groupby('welfare_status').agg({
+            'attendance_rate': 'mean',
+            'welfare_status': 'count'
+        }).rename(columns={'welfare_status': 'student_count'}).reset_index()
+        result['welfare_status'] = welfare_df
+    else:
+        result['welfare_status'] = pd.DataFrame()
+    
+    # NYF status analysis
+    if 'nyf_status' in df.columns:
+        nyf_df = df.groupby('nyf_status').agg({
+            'attendance_rate': 'mean',
+            'nyf_status': 'count'
+        }).rename(columns={'nyf_status': 'student_count'}).reset_index()
+        result['nyf_status'] = nyf_df
+    else:
+        result['nyf_status'] = pd.DataFrame()
+    
+    # Behavioral concerns analysis
+    if 'behavioral_concerns' in df.columns:
+        behavioral_df = df.groupby('behavioral_concerns').agg({
+            'attendance_rate': 'mean',
+            'behavioral_concerns': 'count'
+        }).rename(columns={'behavioral_concerns': 'student_count'}).reset_index()
+        result['behavioral_concerns'] = behavioral_df
+    else:
+        result['behavioral_concerns'] = pd.DataFrame()
+    
+    return result

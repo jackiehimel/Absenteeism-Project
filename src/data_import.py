@@ -36,15 +36,8 @@ def parse_filename_date(filename):
     return None, None
 
 def get_welfare_code(status):
-    """Convert welfare status codes to full status."""
-    codes = {
-        'G': 'General',
-        'P': 'Poverty',
-        'PC': 'Poverty Conditional',
-        'FC': 'Foster Care',
-        'F': 'Free'
-    }
-    return codes.get(status, status)
+    """Return the welfare status as is without mapping to hardcoded values."""
+    return status if status is not None else None
 
 def import_excel_data(file_path):
     """Import attendance data from Excel/Numbers files"""
