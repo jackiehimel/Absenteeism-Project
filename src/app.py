@@ -105,7 +105,7 @@ def main():
     # Create tabs for navigation
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "Dashboard", 
-        "Student Demographics", 
+        "Attendance Tiers", 
         "Chronic Absenteeism", 
         "Demographics", 
         "Interventions", 
@@ -897,7 +897,7 @@ def main():
                     "Family Meetings",
                     "Celebration",
                     "Incentivizes",
-                    "Family trips",
+                    "School trips",
                     "Individual Point Sheets For Attendance",
                     "Attendance Contracts",
                     "Lobby",
