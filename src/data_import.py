@@ -40,7 +40,14 @@ def get_welfare_code(status):
     return status if status is not None else None
 
 def import_excel_data(file_path):
-    """Import attendance data from Excel/Numbers files"""
+    """Import attendance data from Excel/Numbers files
+    
+    Args:
+        file_path: Path to the Excel file
+        
+    Returns:
+        tuple: (students_added, students_updated, records_added) or None if error
+    """
     filename = os.path.basename(file_path)
     print(f"\nProcessing {filename}...")
     
@@ -49,7 +56,12 @@ def import_excel_data(file_path):
     
     if file_path.endswith('.numbers'):
         print(f"⚠️  Please export {filename} to Excel format first")
-        return
+        return None
+    
+    session = get_session()
+    students_added = 0
+    students_updated = 0
+    records_added = 0
     
     try:
         # Read the Excel file with no header
@@ -59,12 +71,12 @@ def import_excel_data(file_path):
         # Find the row with column headers (usually row 1)
         header_row = None
         for idx, row in df.iterrows():
-            if isinstance(row[0], str) and 'user_id' in row[0].lower():
+            if isinstance(row[0], str) and 'user_id' in str(row[0]).lower():
                 header_row = idx
                 break
         
         if header_row is None:
-            raise ValueError("Could not find header row with 'user_id' column")
+            raise ValueError("Could not find header row with 'user_id' column. Check your Excel file format.")
         
         # Get the column names and data
         column_names = df.iloc[header_row]
@@ -73,20 +85,20 @@ def import_excel_data(file_path):
         # Set the column names
         data.columns = column_names
         
-        session = get_session()
-        records_added = 0
+        # Debug column names
+        print(f"Found columns: {list(data.columns)}")
         
         for _, row in data.iterrows():
             try:
                 # Skip rows with no student ID
-                if pd.isna(row['user_id']):
+                if pd.isna(row.get('user_id')):
                     continue
                 
                 # Convert user_id to integer, handling both string and float inputs
                 try:
                     student_id = int(float(row['user_id']))
                 except ValueError:
-                    print(f"⚠️  Invalid user_id: {row['user_id']}")
+                    print(f"⚠️  Invalid user_id: {row.get('user_id')}")
                     continue
                 
                 # Create or update student record
@@ -95,7 +107,7 @@ def import_excel_data(file_path):
                 if not student:
                     # Get grade from class_label
                     grade = None
-                    if pd.notna(row.get('class_label')):
+                    if 'class_label' in row and pd.notna(row.get('class_label')):
                         grade_match = re.search(r'Grade *(\d+)', str(row['class_label']))
                         if grade_match:
                             grade = int(grade_match.group(1))
@@ -111,31 +123,42 @@ def import_excel_data(file_path):
                         osis_id=str(int(float(row['OSIS ID Number']))) if pd.notna(row.get('OSIS ID Number')) else None
                     )
                     session.add(student)
+                    students_added += 1
+                else:
+                    # Update existing student
+                    students_updated += 1
                 
                 # Create attendance record for this period
                 if start_date and end_date:
                     try:
                         # Find attendance columns dynamically
                         attendance_cols = {
-                            'total': next((col for col in data.columns if 'total' in col.lower() and 'day' in col.lower()), None),
-                            'present': next((col for col in data.columns if 'present' in col.lower() and 'day' in col.lower()), None),
-                            'absent': next((col for col in data.columns if 'absent' in col.lower() and 'day' in col.lower()), None),
-                            'present_pct': next((col for col in data.columns if 'present' in col.lower() and '%' in col), None),
-                            'absent_pct': next((col for col in data.columns if 'absent' in col.lower() and '%' in col), None)
+                            'total': next((col for col in data.columns if isinstance(col, str) and 'total' in col.lower() and 'day' in col.lower()), None),
+                            'present': next((col for col in data.columns if isinstance(col, str) and 'present' in col.lower() and 'day' in col.lower()), None),
+                            'absent': next((col for col in data.columns if isinstance(col, str) and 'absent' in col.lower() and 'day' in col.lower()), None),
+                            'present_pct': next((col for col in data.columns if isinstance(col, str) and 'present' in col.lower() and '%' in col), None),
+                            'absent_pct': next((col for col in data.columns if isinstance(col, str) and 'absent' in col.lower() and '%' in col), None)
                         }
                         
+                        # Debug found columns
+                        print(f"Found attendance columns: {attendance_cols}")
+                        
+                        # Ensure we have the necessary columns
+                        if not attendance_cols['total'] or not attendance_cols['present']:
+                            raise ValueError(f"Could not find required columns: {attendance_cols}")
+                        
                         # Convert attendance data
-                        total_days = int(float(row[attendance_cols['total']])) if attendance_cols['total'] and pd.notna(row[attendance_cols['total']]) else 0
-                        present_days = int(float(row[attendance_cols['present']])) if attendance_cols['present'] and pd.notna(row[attendance_cols['present']]) else 0
-                        absent_days = int(float(row[attendance_cols['absent']])) if attendance_cols['absent'] and pd.notna(row[attendance_cols['absent']]) else 0
+                        total_days = int(float(row[attendance_cols['total']])) if attendance_cols['total'] and pd.notna(row.get(attendance_cols['total'])) else 0
+                        present_days = int(float(row[attendance_cols['present']])) if attendance_cols['present'] and pd.notna(row.get(attendance_cols['present'])) else 0
+                        absent_days = int(float(row[attendance_cols['absent']])) if attendance_cols['absent'] and pd.notna(row.get(attendance_cols['absent'])) else 0
                         
                         # Calculate percentages if not provided
-                        if attendance_cols['present_pct'] and pd.notna(row[attendance_cols['present_pct']]):
+                        if attendance_cols['present_pct'] and pd.notna(row.get(attendance_cols['present_pct'])):
                             present_pct = float(row[attendance_cols['present_pct']])
                         else:
                             present_pct = (present_days / total_days * 100) if total_days > 0 else 0
                             
-                        if attendance_cols['absent_pct'] and pd.notna(row[attendance_cols['absent_pct']]):
+                        if attendance_cols['absent_pct'] and pd.notna(row.get(attendance_cols['absent_pct'])):
                             absent_pct = float(row[attendance_cols['absent_pct']])
                         else:
                             absent_pct = (absent_days / total_days * 100) if total_days > 0 else 0
@@ -164,35 +187,53 @@ def import_excel_data(file_path):
         
         session.commit()
         print(f"✅ Successfully imported {records_added} records from {filename}")
+        return (students_added, students_updated, records_added)
         
     except Exception as e:
-        print(f"❌ Error reading {filename}: {str(e)}")
+        error_msg = f"❌ Error reading {filename}: {str(e)}"
+        print(error_msg)
         session.rollback()
+        return None
         
     finally:
         session.close()
 
 def import_all_data(data_directory):
-    """Import all Excel/Numbers files from a directory"""
+    """Import all Excel/Numbers files from a directory
+    
+    Args:
+        data_directory: Path to directory containing data files
+        
+    Returns:
+        list: List of results from each import_excel_data call
+    """
     print(f"Looking for data files in: {data_directory}")
     
-    files = [f for f in os.listdir(data_directory) 
-             if f.endswith(('.xlsx', '.numbers'))]
-    
-    if not files:
-        print("No Excel or Numbers files found!")
-        return
-    
-    print(f"Found {len(files)} files to process")
-    
-    # Sort files by date (oldest first)
-    files.sort()
-    
-    for filename in files:
-        file_path = os.path.join(data_directory, filename)
-        import_excel_data(file_path)
-    
-    print("\nData import completed!")
+    try:
+        files = [f for f in os.listdir(data_directory) 
+                if f.endswith(('.xlsx', '.xls'))]
+        
+        if not files:
+            print("No Excel files found!")
+            return []
+        
+        print(f"Found {len(files)} files to process")
+        
+        # Sort files by date (oldest first)
+        files.sort()
+        
+        results = []
+        for filename in files:
+            file_path = os.path.join(data_directory, filename)
+            result = import_excel_data(file_path)
+            results.append(result)
+        
+        print("\nData import completed!")
+        return results
+        
+    except Exception as e:
+        print(f"Error during batch import: {str(e)}")
+        return []
 
 if __name__ == "__main__":
     import os

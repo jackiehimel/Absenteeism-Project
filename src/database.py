@@ -55,12 +55,30 @@ class Intervention(Base):
     student = relationship("Student", back_populates="interventions")
 
 def init_db():
-    engine = create_engine('sqlite:///attendance.db')
+    import os
+    # Check if we're running on Streamlit Cloud (they set this environment variable)
+    if os.environ.get('IS_STREAMLIT_CLOUD') or os.environ.get('STREAMLIT_RUNTIME'):
+        # On Streamlit Cloud, use a database file in a location that persists between app runs
+        db_path = 'sqlite:///streamlit_attendance.db'
+        print(f"Running on Streamlit Cloud with database: {db_path}")
+    else:
+        # For local development, use the local database file
+        db_path = 'sqlite:///attendance.db'
+        print(f"Running locally with database: {db_path}")
+    
+    engine = create_engine(db_path)
     Base.metadata.create_all(engine)
     return engine
 
 def get_session():
-    engine = create_engine('sqlite:///attendance.db')
+    import os
+    # Use the same logic to determine the database path
+    if os.environ.get('IS_STREAMLIT_CLOUD') or os.environ.get('STREAMLIT_RUNTIME'):
+        db_path = 'sqlite:///streamlit_attendance.db'
+    else:
+        db_path = 'sqlite:///attendance.db'
+    
+    engine = create_engine(db_path)
     Session = sessionmaker(bind=engine)
     return Session()
 
