@@ -734,20 +734,25 @@ def main():
                     if not student:
                         continue
                         
-                    # Create a safe row dictionary with defaults for all fields
-                    row = {
-                        'tier': tier_name,
-                        'student_id': student.id,
-                        'grade': student.grade,
-                        'attendance_rate': 0,  # Default to 0
-                        'last_updated': datetime.now()  # Default to current time
-                    }
-                    
-                    # Safely update values from student_info if they exist
-                    if isinstance(student_info, dict):
-                        # Use .get() with default values to avoid KeyError
-                        row['attendance_rate'] = student_info.get('attendance_rate', 0)
-                        row['last_updated'] = student_info.get('last_updated', datetime.now())
+                    try:
+                        # Create a safe row dictionary with defaults for all fields
+                        row = {
+                            'tier': str(tier_name),  # Ensure string
+                            'student_id': str(student.id),  # Ensure string
+                            'grade': str(student.grade),  # Ensure string
+                            'attendance_rate': float(student_info.get('attendance_rate', 0)),  # Ensure float
+                            'last_updated': student_info.get('last_updated', datetime.now())  # Keep as datetime
+                        }
+                    except (ValueError, TypeError) as e:
+                        # If any conversion fails, use safe defaults
+                        print(f"Error creating row for student {student.id}: {e}")
+                        row = {
+                            'tier': str(tier_name),
+                            'student_id': str(student.id),
+                            'grade': str(student.grade),
+                            'attendance_rate': 0.0,
+                            'last_updated': datetime.now()
+                        }
                     rows.append(row)
             
             # Print debug information
@@ -755,24 +760,25 @@ def main():
             
             # Check if we have data
             if rows:
-                # Create DataFrame and explicitly ensure all expected columns exist
-                tiers_df = pd.DataFrame(rows)
-                
-                # Debug: Show the columns in the DataFrame
-                st.write("Debug: tiers_df columns", list(tiers_df.columns))
-                
-                # Make sure the DataFrame has all required columns
-                required_columns = ['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated']
-                for col in required_columns:
-                    if col not in tiers_df.columns:
-                        tiers_df[col] = 0 if col == 'attendance_rate' else ''
-                
-                # Now safely filter with try/except to handle any potential errors
                 try:
-                    at_risk_df = tiers_df[tiers_df['attendance_rate'] < 85]
+                    # Create DataFrame with predefined columns and types
+                    tiers_df = pd.DataFrame(rows, columns=['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated'])
+                    
+                    # Convert attendance_rate to numeric, replacing any errors with 0
+                    tiers_df['attendance_rate'] = pd.to_numeric(tiers_df['attendance_rate'], errors='coerce').fillna(0)
+                    
+                    # Debug: Show the DataFrame info
+                    st.write("Debug: tiers_df info")
+                    st.write(tiers_df.dtypes)
+                    
+                    # Safely filter at-risk students
+                    at_risk_df = tiers_df[tiers_df['attendance_rate'] < 85].copy()
+                    
                 except Exception as e:
-                    st.error(f"Error filtering data: {str(e)}")
-                    at_risk_df = pd.DataFrame(columns=required_columns)
+                    st.error(f"Error processing attendance data: {str(e)}")
+                    # Create empty DataFrames with correct columns if there's an error
+                    tiers_df = pd.DataFrame(columns=['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated'])
+                    at_risk_df = pd.DataFrame(columns=['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated'])
             else:
                 # No data available
                 tiers_df = pd.DataFrame(columns=['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated'])
