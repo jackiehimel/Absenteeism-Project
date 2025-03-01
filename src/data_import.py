@@ -152,16 +152,24 @@ def import_excel_data(file_path):
                         present_days = int(float(row[attendance_cols['present']])) if attendance_cols['present'] and pd.notna(row.get(attendance_cols['present'])) else 0
                         absent_days = int(float(row[attendance_cols['absent']])) if attendance_cols['absent'] and pd.notna(row.get(attendance_cols['absent'])) else 0
                         
-                        # Calculate percentages if not provided
-                        if attendance_cols['present_pct'] and pd.notna(row.get(attendance_cols['present_pct'])):
-                            present_pct = float(row[attendance_cols['present_pct']])
-                        else:
-                            present_pct = (present_days / total_days * 100) if total_days > 0 else 0
+                        # Calculate percentages if not provided, with robust error handling
+                        try:
+                            if attendance_cols['present_pct'] and pd.notna(row.get(attendance_cols['present_pct'])):
+                                present_pct = float(row.get(attendance_cols['present_pct'], 0))
+                            else:
+                                present_pct = (present_days / total_days * 100) if total_days > 0 else 0
+                        except (TypeError, ValueError, ZeroDivisionError) as e:
+                            print(f"Error calculating present percentage: {e}")
+                            present_pct = 0
                             
-                        if attendance_cols['absent_pct'] and pd.notna(row.get(attendance_cols['absent_pct'])):
-                            absent_pct = float(row[attendance_cols['absent_pct']])
-                        else:
-                            absent_pct = (absent_days / total_days * 100) if total_days > 0 else 0
+                        try:
+                            if attendance_cols['absent_pct'] and pd.notna(row.get(attendance_cols['absent_pct'])):
+                                absent_pct = float(row.get(attendance_cols['absent_pct'], 0))
+                            else:
+                                absent_pct = (absent_days / total_days * 100) if total_days > 0 else 0
+                        except (TypeError, ValueError, ZeroDivisionError) as e:
+                            print(f"Error calculating absent percentage: {e}")
+                            absent_pct = 0
                         
                         # Create a single record for the period
                         attendance = AttendanceRecord(

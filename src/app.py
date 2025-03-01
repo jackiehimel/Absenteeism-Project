@@ -745,10 +745,9 @@ def main():
                     
                     # Safely update values from student_info if they exist
                     if isinstance(student_info, dict):
-                        if 'attendance_rate' in student_info:
-                            row['attendance_rate'] = student_info['attendance_rate']
-                        if 'last_updated' in student_info:
-                            row['last_updated'] = student_info['last_updated']
+                        # Use .get() with default values to avoid KeyError
+                        row['attendance_rate'] = student_info.get('attendance_rate', 0)
+                        row['last_updated'] = student_info.get('last_updated', datetime.now())
                     rows.append(row)
             
             # Print debug information
@@ -762,12 +761,18 @@ def main():
                 # Debug: Show the columns in the DataFrame
                 st.write("Debug: tiers_df columns", list(tiers_df.columns))
                 
-                # Make sure the DataFrame has the attendance_rate column
-                if 'attendance_rate' not in tiers_df.columns:
-                    tiers_df['attendance_rate'] = 0  # Add the column with default value if missing
-                    
-                # Now safely filter
-                at_risk_df = tiers_df[tiers_df['attendance_rate'] < 85]
+                # Make sure the DataFrame has all required columns
+                required_columns = ['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated']
+                for col in required_columns:
+                    if col not in tiers_df.columns:
+                        tiers_df[col] = 0 if col == 'attendance_rate' else ''
+                
+                # Now safely filter with try/except to handle any potential errors
+                try:
+                    at_risk_df = tiers_df[tiers_df['attendance_rate'] < 85]
+                except Exception as e:
+                    st.error(f"Error filtering data: {str(e)}")
+                    at_risk_df = pd.DataFrame(columns=required_columns)
             else:
                 # No data available
                 tiers_df = pd.DataFrame(columns=['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated'])
