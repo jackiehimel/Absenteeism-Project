@@ -288,7 +288,7 @@ def main():
                             st.metric(
                                 "Tier 3 (Chronic)",
                                 f"{chronic_count} students", 
-                                f"↑ {chronic_count/total_students*100:.1f}% of total",
+                                f"↑ {chronic_count/total_students*100:.1f}% of total" if total_students > 0 else "0% of total",
                                 delta_color="inverse"
                             )
                         
@@ -297,7 +297,7 @@ def main():
                             st.metric(
                                 "Tier 2 (At Risk)",
                                 f"{at_risk_count} students",
-                                f"↑ {at_risk_count/total_students*100:.1f}% of total",
+                                f"↑ {at_risk_count/total_students*100:.1f}% of total" if total_students > 0 else "0% of total",
                                 delta_color="inverse"
                             )
                         
@@ -306,7 +306,7 @@ def main():
                             st.metric(
                                 "Tier 1 (Warning)",
                                 f"{warning_count} students",
-                                f"↑ {warning_count/total_students*100:.1f}% of total",
+                                f"↑ {warning_count/total_students*100:.1f}% of total" if total_students > 0 else "0% of total",
                                 delta_color="inverse"
                             )
                         
@@ -315,7 +315,7 @@ def main():
                             st.metric(
                                 "On Track",
                                 f"{on_track_count} students",
-                                f"↑ {on_track_count/total_students*100:.1f}% of total"
+                                f"↑ {on_track_count/total_students*100:.1f}% of total" if total_students > 0 else "0% of total"
                             )
                         st.markdown("")
                         
@@ -720,23 +720,48 @@ def main():
         
         # Create a bar chart of at-risk students by grade
         if tiers:
+            # Debug the structure of tiers
+            st.write("Debug: tiers structure", {k: len(v) for k, v in tiers.items()})
+            
             rows = []
             for tier_name, tier_data in tiers.items():
                 for student_info in tier_data:
-                    student = student_info['student']
+                    # Safely access keys with get() to avoid KeyError
+                    student = student_info.get('student')
+                    if not student:
+                        continue
+                        
                     row = {
                         'tier': tier_name,
                         'student_id': student.id,
                         'grade': student.grade,
-                        'attendance_rate': student_info['attendance_rate'],
-                        'last_updated': student_info['last_updated']
+                        'attendance_rate': student_info.get('attendance_rate', 0),  # Default to 0 if missing
+                        'last_updated': student_info.get('last_updated', datetime.now())
                     }
                     rows.append(row)
             
-            tiers_df = pd.DataFrame(rows)
+            # Print debug information
+            st.write(f"Debug: Collected {len(rows)} rows of data")
             
-            # Filter to only show at-risk students (below 85%)
-            at_risk_df = tiers_df[tiers_df['attendance_rate'] < 85]
+            # Check if we have data
+            if rows:
+                # Create DataFrame and explicitly ensure all expected columns exist
+                tiers_df = pd.DataFrame(rows)
+                
+                # Debug: Show the columns in the DataFrame
+                st.write("Debug: tiers_df columns", list(tiers_df.columns))
+                
+                # Make sure the DataFrame has the attendance_rate column
+                if 'attendance_rate' not in tiers_df.columns:
+                    tiers_df['attendance_rate'] = 0  # Add the column with default value if missing
+                    
+                # Now safely filter
+                at_risk_df = tiers_df[tiers_df['attendance_rate'] < 85]
+            else:
+                # No data available
+                tiers_df = pd.DataFrame(columns=['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated'])
+                at_risk_df = pd.DataFrame(columns=['tier', 'student_id', 'grade', 'attendance_rate', 'last_updated'])
+                st.warning("No attendance data available for the selected time period.")
             
             if not at_risk_df.empty:
                 # Group by grade and count students
@@ -745,7 +770,11 @@ def main():
                 # Calculate percentage of students in each grade
                 grade_totals = tiers_df.groupby('grade').size().reset_index(name='total')
                 grade_counts = pd.merge(grade_counts, grade_totals, on='grade')
-                grade_counts['percentage'] = (grade_counts['count'] / grade_counts['total'] * 100).round(1)
+                # Safely calculate percentage avoiding division by zero
+                grade_counts['percentage'] = grade_counts.apply(
+                    lambda row: (row['count'] / row['total'] * 100).round(1) if row['total'] > 0 else 0, 
+                    axis=1
+                )
                 
                 # Create the bar chart
                 fig = px.bar(
