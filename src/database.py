@@ -99,8 +99,11 @@ def get_attendance_trends(grade=None, start_date=None, end_date=None, interval='
     df = pd.DataFrame([(r.date, r.present_days, r.total_days) for r in results],
                       columns=['date', 'present_days', 'total_days'])
     
-    # Calculate attendance rate
-    df['attendance_rate'] = (df['present_days'] / df['total_days'] * 100).round(1)
+    # Calculate attendance rate with safety check for division by zero
+    df['attendance_rate'] = df.apply(
+        lambda row: (row['present_days'] / row['total_days'] * 100).round(1) if row['total_days'] > 0 else 0.0, 
+        axis=1
+    )
     
     # Handle all dates having the same month and day, just different years
     # This is our September 1st every year edge case
@@ -235,7 +238,7 @@ def get_attendance_trend_data(grade=None):
         student_count = result.student_count or 0
         
         if total_days > 0:
-            attendance_rate = (present_days / total_days * 100).round(1)
+            attendance_rate = (present_days / total_days * 100).round(1) if total_days > 0 else 0.0
         else:
             attendance_rate = 0
         

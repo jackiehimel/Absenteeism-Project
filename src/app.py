@@ -24,8 +24,11 @@ def calculate_attendance_rate(student_id):
         # Calculate the attendance rate as a percentage
         if record.total_days == 0:
             return 0.0
-            
-        return (record.present_days / record.total_days) * 100.0
+        
+        try:
+            return (record.present_days / record.total_days) * 100.0
+        except ZeroDivisionError:
+            return 0.0  # Handle any potential division by zero
 
 def interval_callback():
     """This function is called when the interval dropdown changes"""
@@ -731,13 +734,21 @@ def main():
                     if not student:
                         continue
                         
+                    # Create a safe row dictionary with defaults for all fields
                     row = {
                         'tier': tier_name,
                         'student_id': student.id,
                         'grade': student.grade,
-                        'attendance_rate': student_info.get('attendance_rate', 0),  # Default to 0 if missing
-                        'last_updated': student_info.get('last_updated', datetime.now())
+                        'attendance_rate': 0,  # Default to 0
+                        'last_updated': datetime.now()  # Default to current time
                     }
+                    
+                    # Safely update values from student_info if they exist
+                    if isinstance(student_info, dict):
+                        if 'attendance_rate' in student_info:
+                            row['attendance_rate'] = student_info['attendance_rate']
+                        if 'last_updated' in student_info:
+                            row['last_updated'] = student_info['last_updated']
                     rows.append(row)
             
             # Print debug information
