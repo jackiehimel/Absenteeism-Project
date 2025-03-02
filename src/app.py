@@ -683,11 +683,16 @@ def main():
         # Overall Metrics section
         st.subheader("Overall Metrics")
         
-        # Get total student count, average attendance, and below 90% count
+        # Get total student count, average attendance, and tier data
         session = get_session()
-        total_students = session.query(Student).count() if selected_grade == "All Grades" else session.query(Student).filter(Student.grade == selected_grade).count()
         
-        # Get average attendance rate
+        # Get tier data first
+        tiers = get_tiered_attendance(grade=selected_grade if selected_grade != "All Grades" else None)
+        
+        # Calculate total students from tiers
+        total_students = sum(len(tier_data) for tier_data in tiers.values())
+        
+        # Calculate average attendance rate from tier data
         if total_students > 0:
             if selected_grade == "All Grades":
                 avg_query = session.query(func.avg(AttendanceRecord.present_percentage)).join(Student)
@@ -698,25 +703,43 @@ def main():
         else:
             avg_attendance = 0
         
-        # Get count of students below 90%
-        below_90_count = len(tiers.get('tier3', [])) + len(tiers.get('tier2', [])) + len(tiers.get('tier1', []))
-        below_90_percentage = (below_90_count / total_students * 100) if total_students > 0 else 0
+        # Calculate tier counts and percentages
+        tier3_count = len(tiers.get('tier3', []))
+        tier2_count = len(tiers.get('tier2', []))
+        tier1_count = len(tiers.get('tier1', []))
+        on_track_count = len(tiers.get('on_track', []))
         
-        # Display metrics in three columns
-        col1, col2, col3 = st.columns(3)
+        # Calculate total and percentages
+        total_count = tier3_count + tier2_count + tier1_count + on_track_count
+        below_90_count = tier3_count + tier2_count + tier1_count
+        below_90_percentage = (below_90_count / total_count * 100) if total_count > 0 else 0
+        
+        # Display metrics in four columns for each tier
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.markdown("**Total Students**")
-            st.markdown(f"<h2>{total_students}</h2>", unsafe_allow_html=True)
+            st.markdown("**Tier 3 (Chronic)**")
+            st.markdown(f"<h2>{tier3_count} students</h2>", unsafe_allow_html=True)
+            percentage = (tier3_count / total_count * 100) if total_count > 0 else 0
+            st.markdown(f"<p style='color: #CC0000;'>↑ {percentage:.1f}% of total</p>", unsafe_allow_html=True)
         
         with col2:
-            st.markdown("**Average Attendance Rate**")
-            st.markdown(f"<h2>{avg_attendance:.1f}%</h2>", unsafe_allow_html=True)
+            st.markdown("**Tier 2 (At Risk)**")
+            st.markdown(f"<h2>{tier2_count} students</h2>", unsafe_allow_html=True)
+            percentage = (tier2_count / total_count * 100) if total_count > 0 else 0
+            st.markdown(f"<p style='color: #FF9800;'>↑ {percentage:.1f}% of total</p>", unsafe_allow_html=True)
         
         with col3:
-            st.markdown("**Students Below 90%**")
-            st.markdown(f"<h2>{below_90_count}</h2>", unsafe_allow_html=True)
-            st.markdown(f"<p style='color: #FF5252;'>↑ {below_90_percentage:.1f}% of total</p>", unsafe_allow_html=True)
+            st.markdown("**Tier 1 (Warning)**")
+            st.markdown(f"<h2>{tier1_count} students</h2>", unsafe_allow_html=True)
+            percentage = (tier1_count / total_count * 100) if total_count > 0 else 0
+            st.markdown(f"<p style='color: #FDD835;'>↑ {percentage:.1f}% of total</p>", unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown("**On Track**")
+            st.markdown(f"<h2>{on_track_count} students</h2>", unsafe_allow_html=True)
+            percentage = (on_track_count / total_count * 100) if total_count > 0 else 0
+            st.markdown(f"<p style='color: #4CAF50;'>↑ {percentage:.1f}% of total</p>", unsafe_allow_html=True)
         
         # Attendance Distribution section
         st.subheader("Attendance Distribution")
